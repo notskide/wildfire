@@ -1,0 +1,102 @@
+name: Build Wildfire Lab native engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-arm64-engine:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout Wildfire Lab build repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Limbo native source
+        uses: actions/checkout@v4
+        with:
+          repository: limboemu/limbo
+          ref: master
+          path: LimboSource
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make autoconf automake git python3 binutils libtool-bin pkg-config flex bison gettext texinfo rsync patch wget curl xz-utils
+
+      - name: Install Android NDK r14b
+        uses: android-actions/setup-android@v3
+
+      - name: Install legacy NDK package
+        run: |
+          sdkmanager --install "ndk;14.1.3816874"
+          echo "NDK_ROOT=$ANDROID_SDK_ROOT/ndk/14.1.3816874" >> "$GITHUB_ENV"
+
+      - name: Download native dependencies
+        working-directory: LimboSource/limbo-android-lib/src/main/jni
+        run: |
+          set -eux
+          curl -fL https://download.qemu.org/qemu-2.9.1.tar.xz -o /tmp/qemu.tar.xz
+          tar -xJf /tmp/qemu.tar.xz -C /tmp
+          mv /tmp/qemu-2.9.1 qemu
+          curl -fL https://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.1.tar.xz -o /tmp/glib.tar.xz
+          tar -xJf /tmp/glib.tar.xz -C /tmp
+          mv /tmp/glib-2.56.1 glib
+          curl -fL https://sourceware.org/pub/libffi/libffi-3.3.tar.gz -o /tmp/libffi.tar.gz
+          tar -xzf /tmp/libffi.tar.gz -C /tmp
+          mv /tmp/libffi-3.3 libffi
+          curl -fL https://www.cairographics.org/releases/pixman-0.40.0.tar.gz -o /tmp/pixman.tar.gz
+          tar -xzf /tmp/pixman.tar.gz -C /tmp
+          mv /tmp/pixman-0.40.0 pixman
+          curl -fL https://www.libsdl.org/release/SDL2-2.0.8.tar.gz -o /tmp/sdl2.tar.gz
+          tar -xzf /tmp/sdl2.tar.gz -C /tmp
+          mv /tmp/SDL2-2.0.8 SDL2
+
+      - name: Apply Limbo patches
+        working-directory: LimboSource/limbo-android-lib/src/main/jni
+        run: |
+          set -eux
+          patch -d qemu -p1 < patches/qemu-2.9.1.patch
+          patch -d glib -p1 < patches/glib-2.56.1.patch
+          patch -d SDL2 -p1 < patches/sdl2-2.0.8.patch
+
+      - name: Compile ARM64 Android engine for x86_64 guests
+        working-directory: LimboSource/limbo-android-lib/src/main/jni
+        env:
+          NDK_ENV: linux-x86_64
+          USE_GCC: "true"
+          BUILD_HOST: arm64-v8a
+          BUILD_GUEST: x86_64-softmmu
+          USE_QEMU_VERSION: "2.9.1"
+          USE_AAUDIO: "false"
+          USE_KVM: "false"
+        run: |
+          set -eux
+          make -j2 limbo NDK_ROOT="$NDK_ROOT" NDK_ENV="$NDK_ENV" USE_GCC="$USE_GCC" BUILD_HOST="$BUILD_HOST" BUILD_GUEST="$BUILD_GUEST" USE_QEMU_VERSION="$USE_QEMU_VERSION" USE_AAUDIO="$USE_AAUDIO" USE_KVM="$USE_KVM"
+
+      - name: Verify ARM64 shared libraries
+        working-directory: LimboSource
+        run: |
+          set -eux
+          NDK="$NDK_ROOT"
+          LLVM="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          find limbo-android-lib/src/main/jniLibs/arm64-v8a limbo-android-x86/src/main/jniLibs/arm64-v8a -type f -name '*.so' -print
+          test -f limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so
+          "$LLVM/llvm-readelf" -h limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so | grep -E 'Class:|Machine:'
+          mkdir -p "$GITHUB_WORKSPACE/native-engine"
+          cp -a limbo-android-lib/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/common"
+          cp -a limbo-android-x86/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/qemu"
+          cp -a limbo-android-x86/src/main/assets "$GITHUB_WORKSPACE/native-engine/assets"
+
+      - name: Upload native engine artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wildfirelab-native-arm64-x86_64
+          path: native-engine/
+          if-no-files-found: error
+          retention-days: 14
