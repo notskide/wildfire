@@ -34,21 +34,58 @@ jobs:
           grub-file --is-x86-multiboot tskideos/build/kernel.elf
           test -s tskideos/build/tskideos.iso
 
-      - name: Boot smoke test in QEMU
+      - name: Boot and test Tiny Skide keyboard shell in QEMU
         run: |
-          set +e
-          timeout 12s qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display vnc=127.0.0.1:0 -serial file:tskideos/build/serial.log -monitor none -no-reboot -no-shutdown
-          status=$?
-          set -e
-          if [ "$status" -ne 124 ] && [ "$status" -ne 137 ]; then
-            echo "QEMU exited unexpectedly with status $status"
-            cat tskideos/build/serial.log || true
-            exit "$status"
-          fi
+          set -eu
+          qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display vnc=127.0.0.1:0 -serial file:tskideos/build/serial.log -monitor unix:tskideos/build/monitor.sock,server,nowait -no-reboot -no-shutdown &
+          qemu_pid=$!
+          trap 'kill "$qemu_pid" 2>/dev/null || true; wait "$qemu_pid" 2>/dev/null || true' EXIT
+          python3 - <<'PY'
+          import pathlib
+          import socket
+          import time
+
+          log = pathlib.Path("tskideos/build/serial.log")
+          for attempt in range(120):
+              if log.exists() and "Tiny Skide desktop ready" in log.read_text(errors="replace"):
+                  break
+              time.sleep(0.1)
+          else:
+              raise SystemExit("QEMU did not finish booting")
+
+          monitor_path = "tskideos/build/monitor.sock"
+          monitor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+          monitor.settimeout(2)
+          for attempt in range(100):
+              try:
+                  monitor.connect(monitor_path)
+                  break
+              except (FileNotFoundError, ConnectionRefusedError):
+                  time.sleep(0.1)
+          else:
+              raise SystemExit("QEMU monitor socket did not become ready")
+
+          try:
+              try:
+                  monitor.recv(4096)
+              except socket.timeout:
+                  pass
+              for key in ["t", "h", "e", "l", "p", "ret"]:
+                  monitor.sendall(("sendkey " + key + "\n").encode())
+                  time.sleep(0.2)
+                  try:
+                      monitor.recv(4096)
+                  except socket.timeout:
+                      pass
+              time.sleep(0.5)
+          finally:
+              monitor.close()
+          PY
           cat tskideos/build/serial.log
           grep -q "TSkideOS 0.2.0 booting" tskideos/build/serial.log
           grep -q "framebuffer online" tskideos/build/serial.log
           grep -q "Tiny Skide desktop ready" tskideos/build/serial.log
+          grep -q "shell command: help" tskideos/build/serial.log
 
       - name: Calculate ISO checksum
         run: |
