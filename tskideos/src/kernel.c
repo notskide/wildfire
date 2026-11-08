@@ -763,9 +763,47 @@ void timer_irq_handler(void) {
 }
 
 void keyboard_irq_handler(void) {
-    handle_key(inb(0x60));
+    uint8_t code = inb(0x60);
+    if (!(code & 0x80)) {
+        serial_print("keyboard scancode: ");
+        serial_hex(code);
+        serial_print("\r\n");
+    }
+    handle_key(code);
     redraw_pending = 1;
     outb(0x20, 0x20);
+}
+
+static void wait_keyboard_input_empty(void) {
+    for (uint32_t i = 0; i < 1000000; i++) if (!(inb(0x64) & 0x02)) return;
+}
+
+static int wait_keyboard_output_full(void) {
+    for (uint32_t i = 0; i < 1000000; i++) if (inb(0x64) & 0x01) return 1;
+    return 0;
+}
+
+static void initialize_keyboard(void) {
+    while (inb(0x64) & 0x01) inb(0x60);
+    wait_keyboard_input_empty();
+    outb(0x64, 0x20);
+    if (!wait_keyboard_output_full()) return;
+    uint8_t config = inb(0x60);
+    config = (uint8_t)((config | 0x01) & (uint8_t)~0x10);
+    wait_keyboard_input_empty();
+    outb(0x64, 0x60);
+    wait_keyboard_input_empty();
+    outb(0x60, config);
+    wait_keyboard_input_empty();
+    outb(0x64, 0xAE);
+    wait_keyboard_input_empty();
+    outb(0x60, 0xF4);
+    if (wait_keyboard_output_full()) {
+        uint8_t response = inb(0x60);
+        serial_print("Keyboard controller response: ");
+        serial_hex(response);
+        serial_print("\r\n");
+    }
 }
 
 static void setup_interrupts(void) {
@@ -784,6 +822,9 @@ static void setup_interrupts(void) {
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
+    outb(0x21, 0xFF);
+    outb(0xA1, 0xFF);
+    initialize_keyboard();
     outb(0x21, 0xFC);
     outb(0xA1, 0xFF);
     uint16_t divisor = (uint16_t)(1193182 / 20);
