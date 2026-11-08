@@ -29,10 +29,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y make autoconf automake git python3 binutils libtool-bin pkg-config flex bison gettext texinfo rsync patch wget curl xz-utils
 
-      - name: Install Android NDK r14b
+      - name: Install Android SDK tools
         uses: android-actions/setup-android@v3
 
-      - name: Install legacy NDK package
+      - name: Install legacy NDK r14b
         run: |
           sdkmanager --install "ndk;14.1.3816874"
           echo "NDK_ROOT=$ANDROID_SDK_ROOT/ndk/14.1.3816874" >> "$GITHUB_ENV"
@@ -79,15 +79,13 @@ jobs:
           set -eux
           make -j2 limbo NDK_ROOT="$NDK_ROOT" NDK_ENV="$NDK_ENV" USE_GCC="$USE_GCC" BUILD_HOST="$BUILD_HOST" BUILD_GUEST="$BUILD_GUEST" USE_QEMU_VERSION="$USE_QEMU_VERSION" USE_AAUDIO="$USE_AAUDIO" USE_KVM="$USE_KVM"
 
-      - name: Verify ARM64 shared libraries
+      - name: Verify ARM64 shared libraries and package engine
         working-directory: LimboSource
         run: |
           set -eux
-          NDK="$NDK_ROOT"
-          LLVM="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
           find limbo-android-lib/src/main/jniLibs/arm64-v8a limbo-android-x86/src/main/jniLibs/arm64-v8a -type f -name '*.so' -print
           test -f limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so
-          "$LLVM/llvm-readelf" -h limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so | grep -E 'Class:|Machine:'
+          readelf -h limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so | grep -E 'Class:|Machine:'
           mkdir -p "$GITHUB_WORKSPACE/native-engine"
           cp -a limbo-android-lib/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/common"
           cp -a limbo-android-x86/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/qemu"
