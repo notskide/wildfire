@@ -24,7 +24,7 @@ jobs:
       - name: Install toolchain and emulator
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib grub-pc-bin grub-common xorriso mtools qemu-system-x86
+          sudo apt-get install -y gcc-multilib grub-pc-bin grub-common xorriso mtools qemu-system-x86 xvfb
 
       - name: Build bootable ISO
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: Boot smoke test in QEMU
         run: |
           set +e
-          timeout 12s qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display none -serial file:tskideos/build/serial.log -monitor none -no-reboot -no-shutdown
+          timeout 12s xvfb-run -a qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display gtk -serial file:tskideos/build/serial.log -monitor none -no-reboot -no-shutdown
           status=$?
           set -e
           if [ "$status" -ne 124 ] && [ "$status" -ne 137 ]; then
@@ -47,6 +47,7 @@ jobs:
           fi
           cat tskideos/build/serial.log
           grep -q "TSkideOS 0.2.0 booting" tskideos/build/serial.log
+          grep -q "framebuffer online" tskideos/build/serial.log
           grep -q "Tiny Skide desktop ready" tskideos/build/serial.log
 
       - name: Calculate ISO checksum
