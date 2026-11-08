@@ -121,9 +121,7 @@ jobs:
               raise SystemExit("App version was not updated")
           gradle.write_text(value)
 
-          icon = Path("limbo-android-x86/src/main/res/drawable/limbo.xml")
-          icon.parent.mkdir(parents=True, exist_ok=True)
-          icon.write_text("""<?xml version="1.0" encoding="utf-8"?>
+          icon_xml = """<?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp"
               android:height="108dp"
@@ -139,7 +137,11 @@ jobs:
                   android:fillColor="#FFE2B8"
                   android:pathData="M55,57C50,63 46,69 47,76C48,83 56,87 62,82C68,77 64,68 60,63C59,69 56,73 53,75C54,68 54,62 55,57Z" />
           </vector>
-          """)
+          """
+          for folder in ("drawable", "drawable-ldpi", "drawable-mdpi", "drawable-hdpi"):
+              icon = Path("limbo-android-x86/src/main/res") / folder / "limbo.xml"
+              icon.parent.mkdir(parents=True, exist_ok=True)
+              icon.write_text(icon_xml)
           PY
 
       - name: Build Wildfire Lab APK
