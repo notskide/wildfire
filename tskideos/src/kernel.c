@@ -802,6 +802,7 @@ void kernel_main(uint32_t magic, uint32_t info_address) {
     init_graphics(magic, info);
     if (graphics_enabled) serial_print("framebuffer online\r\n");
     else serial_print("VGA text fallback online\r\n");
+    serial_print("Tiny Skide desktop ready\r\n");
     shell_welcome();
     blink_closed = 0;
     draw_desktop();
