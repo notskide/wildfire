@@ -97,7 +97,7 @@ jobs:
           cat tskideos/build/serial.log
           grep -q "TSkideOS 0.2.0 booting" tskideos/build/serial.log
           grep -q "framebuffer online" tskideos/build/serial.log
-          grep -q "Tiny Skide desktop ready" tskideos/build/serial.log
+          grep -q "TSkideOS desktop ready" tskideos/build/serial.log
           grep -q "shell command: help" tskideos/build/serial.log
       - name: Calculate ISO checksum
         run: |
@@ -108,7 +108,7 @@ jobs:
       - name: Upload TSkideOS ISO
         uses: actions/upload-artifact@v4
         with:
-          name: TSkideOS-0.2.0-ISO
+          name: TSkideOS-0.3.0-ISO
           path: |
             tskideos/build/tskideos.iso
             tskideos/build/tskideos.iso.sha256
