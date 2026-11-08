@@ -127,6 +127,10 @@ static inline uint8_t inb(uint16_t port) {
     return value;
 }
 
+static inline void outw(uint16_t port, uint16_t value) {
+    __asm__ volatile("outw %0, %1" : : "a"(value), "Nd"(port));
+}
+
 static void serial_init(void) {
     outb(0x3F9, 0x00);
     outb(0x3FB, 0x80);
@@ -310,8 +314,8 @@ static void reboot_machine(void) {
 }
 
 static void shutdown_machine(void) {
-    outb(0x604, 0x2000);
-    outb(0xB004, 0x2000);
+    outw(0x604, 0x2000);
+    outw(0xB004, 0x2000);
     __asm__ volatile("cli");
     for (;;) __asm__ volatile("hlt");
 }
