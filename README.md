@@ -1,32 +1,30 @@
 # TSkideOS
 
-TSkideOS is a lightweight, touch-first phone interface being built to revive the HTC Wildfire A3333.
+TSkideOS is an independent operating system project. Its primary build is a bootable x86 ISO for PC emulators such as QEMU and Limbo.
 
-## Phone edition 0.2.0
+## TSkideOS 0.3.0
 
-The phone edition is a Java-only Android home replacement designed around the Wildfire's 240 × 320 display and Android 2.2 (API 8).
+The current kernel boots through GRUB using Multiboot, initializes a framebuffer when one is available, draws the TSkideOS desktop, reads a PS/2 keyboard and provides the SKSH command shell.
 
-- Touch-first home screen with swipeable pages
-- App drawer populated from installed launcher apps, using their real names and icons
-- Launches installed phone apps
-- Pull-down control centre with Wi-Fi, Bluetooth, silent mode and brightness
-- Appearance, connections, sound and About settings
-- Persistent accent colour
-- Battery and clock information
-- No native libraries or background services
+- Bootable GRUB ISO for x86 PCs and emulators
+- Framebuffer graphics with VGA text fallback
+- Keyboard input and a built-in command shell
+- System information, memory reporting, accent colours and desktop/about screens
+- Reboot and emulator shutdown commands
+- QEMU boot test that verifies the shell accepts a command
 
-Build with Gradle:
+Build locally on a Linux x86 toolchain:
 
 ```sh
-gradle :app:assembleDebug
+make -C tskideos clean iso
 ```
 
-The APK targets Android 2.2 / API 8 and can be selected as the default Home app after installation.
+The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and tests the ISO on every relevant kernel change.
 
-## Hardware and ROM boundary
+## Run in Limbo or QEMU
 
-The phone edition runs on top of the HTC Wildfire's existing Android 2.2.1 system. This deliberately preserves the phone's ARMv6 kernel, touchscreen, camera, radio and other hardware drivers. It is a replacement home environment, not yet a standalone bootable ROM. A true ROM requires a device-specific ARMv6 kernel, boot/recovery integration and hardware support.
+Create an x86 PC virtual machine, attach `tskideos.iso` as a CD-ROM, and boot from the CD-ROM. A small 128 MB RAM allocation is sufficient for the current kernel.
 
-## Emulator experiment
+## Hardware boundary
 
-The `tskideos/` directory contains an earlier freestanding x86 Multiboot experiment for QEMU/Wildfire Lab. That ISO is only for emulator/kernel experiments and cannot boot directly on the ARMv6 HTC Wildfire.
+The current ISO targets x86 and is intended for PC emulators. It does not boot directly on the HTC Wildfire A3333, which uses an ARMv6 processor. A Wildfire edition requires a separate ARMv6 kernel, boot image, and device-specific drivers. The Android launcher prototype in `app/` is separate from the TSkideOS operating system and is not the ISO.
