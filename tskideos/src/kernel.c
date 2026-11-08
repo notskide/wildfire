@@ -154,6 +154,22 @@ static void serial_print(const char *value) {
     while (*value) serial_write(*value++);
 }
 
+static void serial_hex(uint32_t value) {
+    static const char digits[] = "0123456789ABCDEF";
+    serial_print("0x");
+    for (int32_t shift = 28; shift >= 0; shift -= 4) serial_write(digits[(value >> shift) & 15]);
+}
+
+static void serial_dec(uint32_t value) {
+    char digits[11];
+    uint32_t count = 0;
+    do {
+        digits[count++] = (char)('0' + value % 10);
+        value /= 10;
+    } while (value && count < sizeof(digits));
+    while (count) serial_write(digits[--count]);
+}
+
 static uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
     return ((uint32_t)r << red_position) | ((uint32_t)g << green_position) | ((uint32_t)b << blue_position);
 }
@@ -212,9 +228,42 @@ static void vga_at(uint8_t x, uint8_t y, const char *value, uint8_t attribute) {
 
 static void init_graphics(uint32_t magic, multiboot_info_t *info) {
     graphics_enabled = 0;
-    if (magic != MULTIBOOT_MAGIC || !info || !(info->flags & (1u << 12))) return;
-    if (info->framebuffer_type != 1 || info->framebuffer_bpp != 32) return;
-    if (info->framebuffer_width < 640 || info->framebuffer_height < 480) return;
+    serial_print("Multiboot magic: ");
+    serial_hex(magic);
+    serial_print("\r\n");
+    if (magic != MULTIBOOT_MAGIC || !info) {
+        serial_print("No valid Multiboot information block\r\n");
+        return;
+    }
+    serial_print("Multiboot flags: ");
+    serial_hex(info->flags);
+    serial_print("\r\n");
+    if (!(info->flags & (1u << 12))) {
+        serial_print("GRUB did not provide framebuffer information\r\n");
+        return;
+    }
+    serial_print("Framebuffer: ");
+    serial_hex((uint32_t)(info->framebuffer_addr >> 32));
+    serial_hex((uint32_t)info->framebuffer_addr);
+    serial_print(" ");
+    serial_dec(info->framebuffer_width);
+    serial_print("x");
+    serial_dec(info->framebuffer_height);
+    serial_print(" pitch=");
+    serial_dec(info->framebuffer_pitch);
+    serial_print(" bpp=");
+    serial_dec(info->framebuffer_bpp);
+    serial_print(" type=");
+    serial_dec(info->framebuffer_type);
+    serial_print("\r\n");
+    if (info->framebuffer_type != 1 || info->framebuffer_bpp != 32) {
+        serial_print("Unsupported framebuffer pixel format\r\n");
+        return;
+    }
+    if (info->framebuffer_width < 640 || info->framebuffer_height < 480) {
+        serial_print("Framebuffer is smaller than 640x480\r\n");
+        return;
+    }
     framebuffer = (volatile uint8_t *)(uintptr_t)info->framebuffer_addr;
     screen_width = info->framebuffer_width;
     screen_height = info->framebuffer_height;
