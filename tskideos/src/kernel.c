@@ -64,6 +64,7 @@ static uint8_t caps_lock;
 static uint8_t accent_index;
 static uint32_t memory_lower;
 static uint32_t memory_upper;
+static volatile uint32_t timer_ticks;
 static volatile uint8_t redraw_pending = 1;
 typedef struct __attribute__((packed)) {
     uint16_t offset_low;
@@ -296,7 +297,14 @@ static void copy_text(char *destination, const char *source, uint32_t limit) {
 
 static int text_equal(const char *a, const char *b) {
     uint32_t i = 0;
-    while (a[i] && b[i] && a[i] == b[i]) i++;
+    while (a[i] && b[i]) {
+        char ca = a[i];
+        char cb = b[i];
+        if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+        if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+        if (ca != cb) return 0;
+        i++;
+    }
     return a[i] == 0 && b[i] == 0;
 }
 
@@ -346,9 +354,9 @@ static void append_number_line(const char *prefix, uint32_t value, const char *s
 
 static void shell_welcome(void) {
     shell_line_count = 0;
-    append_line("WELCOME TO THE TSKIDEOS SHELL.");
-    append_line("TINY SKIDE IS READY.");
-    append_line("TYPE HELP TO SEE WHAT I CAN DO.");
+    append_line("HEY SKIDE! TINY SKIDE HERE.");
+    append_line("WELCOME TO YOUR TSKIDEOS SHELL.");
+    append_line("TYPE HELP IF YOU NEED ANYTHING.");
     append_line("");
 }
 
@@ -356,7 +364,8 @@ static void shell_help(void) {
     append_line("AVAILABLE COMMANDS:");
     append_line("HELP ABOUT WHOAMI VER NEOFETCH");
     append_line("MEM ECHO COLOR CLEAR DESKTOP");
-    append_line("REBOOT SHUTDOWN");
+    append_line("HELLO JOKE MOOD PING REBOOT");
+    append_line("SHUTDOWN");
 }
 
 static void shell_about(void) {
@@ -409,6 +418,19 @@ static void process_command(void) {
         append_line("ARCH: I386 ON QEMU");
         append_line("SHELL: SKSH");
         append_line("DISPLAY: FRAMEBUFFER");
+    } else if (text_equal(command, "hello") || text_equal(command, "hi") || text_equal(command, "hey")) {
+        append_line("HEYYY SKIDE! GOOD TO SEE YOU.");
+        append_line("I'M JUST CHILLING IN YOUR OS.");
+    } else if (text_equal(command, "joke")) {
+        append_line("WHY DID THE BYTE VISIT THE DOCTOR?");
+        append_line("IT WAS FEELING A LITTLE BIT OFF.");
+    } else if (text_equal(command, "mood")) {
+        append_line("MOOD: 100 PERCENT CHILL.");
+        append_line("STATUS: HAPPY TO BE HERE.");
+    } else if (text_equal(command, "ping")) {
+        append_line("PONG! I'M RIGHT HERE.");
+    } else if (text_equal(command, "buddy") || text_equal(command, "skide")) {
+        append_line("TINY SKIDE, AT YOUR SERVICE.");
     } else if (text_equal(command, "mem")) {
         append_number_line("LOW MEMORY: ", memory_lower, " KB");
         append_number_line("HIGH MEMORY: ", memory_upper, " KB");
@@ -467,8 +489,13 @@ static void draw_mascot(int32_t center_x, int32_t top_y, int32_t scale) {
     fill_rect(center_x - 17 * scale, top_y + 10 * scale, 6 * scale, 12 * scale, hair);
     fill_rect(center_x - 10 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
     fill_rect(center_x + 3 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
-    fill_rect(center_x - 8 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
-    fill_rect(center_x + 5 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
+    if ((timer_ticks % 100) < 2) {
+        fill_rect(center_x - 9 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
+        fill_rect(center_x + 4 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
+    } else {
+        fill_rect(center_x - 8 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
+        fill_rect(center_x + 5 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
+    }
     fill_rect(center_x - 3 * scale, top_y + 29 * scale, 7 * scale, 2 * scale, rgb(93, 48, 43));
     fill_rect(center_x - 4 * scale, top_y + 40 * scale, 8 * scale, 3 * scale, rgb(226, 230, 232));
 }
