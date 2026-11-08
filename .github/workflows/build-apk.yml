@@ -46,7 +46,9 @@ jobs:
       - name: Install Android build packages
         run: |
           set -eux
+          set +o pipefail
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          set -o pipefail
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-29" "build-tools;29.0.3"
 
       - name: Install Java 11 for Gradle
