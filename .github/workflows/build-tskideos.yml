@@ -48,7 +48,7 @@ jobs:
 
           log = pathlib.Path("tskideos/build/serial.log")
           for attempt in range(120):
-              if log.exists() and "interrupts enabled" in log.read_text(errors="replace"):
+              if log.exists() and "Keyboard input ready" in log.read_text(errors="replace"):
                   break
               time.sleep(0.1)
           else:
