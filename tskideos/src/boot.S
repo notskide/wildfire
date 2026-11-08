@@ -19,6 +19,7 @@ stack_top:
 .type _start, @function
 _start:
     cli
+    cld
     mov $stack_top, %esp
     xor %ebp, %ebp
     push %ebx
