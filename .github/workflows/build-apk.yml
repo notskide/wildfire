@@ -58,8 +58,8 @@ jobs:
           set -eux
           mkdir -p LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a
           mkdir -p LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a
-          cp -a native-engine/common/arm64-v8a/. LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/
-          cp -a native-engine/qemu/arm64-v8a/. LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/
+          cp -a native-engine/common/. LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/
+          cp -a native-engine/qemu/. LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/
           cp -a native-engine/assets/. LimboSource/limbo-android-x86/src/main/assets/
           test -f LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/libcompat-limbo.so
           test -f LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/libSDL2.so
