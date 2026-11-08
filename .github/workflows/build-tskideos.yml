@@ -37,12 +37,13 @@ jobs:
       - name: Boot and test Tiny Skide keyboard shell in QEMU
         run: |
           set -eu
-          qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display vnc=127.0.0.1:0 -serial file:tskideos/build/serial.log -monitor unix:tskideos/build/monitor.sock,server,nowait -no-reboot -no-shutdown &
+          qemu-system-i386 -machine pc -m 128M -vga std -cdrom tskideos/build/tskideos.iso -boot d -display vnc=127.0.0.1:0 -serial file:tskideos/build/serial.log -monitor none -no-reboot -no-shutdown &
           qemu_pid=$!
           trap 'kill "$qemu_pid" 2>/dev/null || true; wait "$qemu_pid" 2>/dev/null || true' EXIT
           python3 - <<'PY'
           import pathlib
           import socket
+          import struct
           import time
 
           log = pathlib.Path("tskideos/build/serial.log")
@@ -53,40 +54,51 @@ jobs:
           else:
               raise SystemExit("QEMU did not finish booting")
 
-          monitor_path = "tskideos/build/monitor.sock"
-          monitor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-          monitor.settimeout(2)
-          for attempt in range(100):
-              try:
-                  monitor.connect(monitor_path)
-                  break
-              except (FileNotFoundError, ConnectionRefusedError):
-                  time.sleep(0.1)
-          else:
-              raise SystemExit("QEMU monitor socket did not become ready")
+          def receive_exact(connection, size):
+              data = bytearray()
+              while len(data) < size:
+                  part = connection.recv(size - len(data))
+                  if not part:
+                      raise SystemExit("VNC connection closed during handshake")
+                  data.extend(part)
+              return bytes(data)
 
-          try:
-              try:
-                  monitor.recv(4096)
-              except socket.timeout:
-                  pass
-              for key in ["t", "h", "e", "l", "p", "ret"]:
-                  monitor.sendall(("sendkey " + key + "\n").encode())
-                  time.sleep(0.2)
-                  try:
-                      monitor.recv(4096)
-                  except socket.timeout:
-                      pass
-              time.sleep(0.5)
-          finally:
-              monitor.close()
+          vnc = socket.create_connection(("127.0.0.1", 5900), timeout=3)
+          vnc.settimeout(3)
+          version = receive_exact(vnc, 12)
+          vnc.sendall(version)
+          security_count = receive_exact(vnc, 1)[0]
+          if security_count == 0:
+              reason_length = struct.unpack(">I", receive_exact(vnc, 4))[0]
+              raise SystemExit(receive_exact(vnc, reason_length).decode(errors="replace"))
+          security_types = receive_exact(vnc, security_count)
+          if 1 not in security_types:
+              raise SystemExit("VNC server did not offer unauthenticated local testing")
+          vnc.sendall(b"\x01")
+          if struct.unpack(">I", receive_exact(vnc, 4))[0] != 0:
+              raise SystemExit("VNC security handshake failed")
+          vnc.sendall(b"\x01")
+          server_init = receive_exact(vnc, 24)
+          name_length = struct.unpack(">I", server_init[20:24])[0]
+          receive_exact(vnc, name_length)
+
+          def press(keysym):
+              vnc.sendall(struct.pack(">BBHI", 4, 1, 0, keysym))
+              time.sleep(0.08)
+              vnc.sendall(struct.pack(">BBHI", 4, 0, 0, keysym))
+              time.sleep(0.12)
+
+          for key in map(ord, "thelp"):
+              press(key)
+          press(0xFF0D)
+          time.sleep(0.5)
+          vnc.close()
           PY
           cat tskideos/build/serial.log
           grep -q "TSkideOS 0.2.0 booting" tskideos/build/serial.log
           grep -q "framebuffer online" tskideos/build/serial.log
           grep -q "Tiny Skide desktop ready" tskideos/build/serial.log
           grep -q "shell command: help" tskideos/build/serial.log
-
       - name: Calculate ISO checksum
         run: |
           cd tskideos/build
