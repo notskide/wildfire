@@ -35,13 +35,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y make autoconf automake git python3 binutils libtool-bin pkg-config flex bison gettext texinfo rsync patch wget curl xz-utils
 
-      - name: Install Android SDK tools
-        uses: android-actions/setup-android@v3
-
       - name: Install legacy NDK r14b
         run: |
-          sdkmanager --install "ndk;14.1.3816874"
-          echo "NDK_ROOT=$ANDROID_SDK_ROOT/ndk/14.1.3816874" >> "$GITHUB_ENV"
+          set -eux
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort | tail -n 1)"
+          fi
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "ndk;14.1.3816874"
+          echo "NDK_ROOT=$ANDROID_HOME/ndk/14.1.3816874" >> "$GITHUB_ENV"
 
       - name: Download native dependencies
         working-directory: LimboSource/limbo-android-lib/src/main/jni
