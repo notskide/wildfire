@@ -140,14 +140,15 @@ jobs:
 
           base = Path("limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/LimboActivity.java")
           value = base.read_text()
-          value, count = re.subn(r'\\s*if \\(Build\\.VERSION\\.SDK_INT >= 26\\)\\s*System\\.loadLibrary\\("compat-SDL2-addons"\\);\\s*', '\\n', value)
-          if count != 1:
+          needle = '            if (Build.VERSION.SDK_INT >= 26)' + chr(10) + '                System.loadLibrary("compat-SDL2-addons");'
+          if value.count(needle) != 1:
               raise SystemExit("Expected optional SDL audio addon load was not found exactly once")
+          value = value.replace(needle, '')
           base.write_text(value)
 
           gradle = Path("limbo-android-x86/build.gradle")
           value = gradle.read_text()
-          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"\\n        versionCode 20000\\n        versionName "0.2.0"')
+          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"' + chr(10) + '        versionCode 20000' + chr(10) + '        versionName "0.2.0"')
           gradle.write_text(value)
           PY
 
