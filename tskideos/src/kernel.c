@@ -64,23 +64,9 @@ static uint8_t caps_lock;
 static uint8_t accent_index;
 static uint32_t memory_lower;
 static uint32_t memory_upper;
-static volatile uint32_t timer_ticks;
+static uint32_t animation_ticks;
+static uint8_t blink_closed;
 static volatile uint8_t redraw_pending = 1;
-typedef struct __attribute__((packed)) {
-    uint16_t offset_low;
-    uint16_t selector;
-    uint8_t zero;
-    uint8_t flags;
-    uint16_t offset_high;
-} idt_entry_t;
-typedef struct __attribute__((packed)) {
-    uint16_t limit;
-    uint32_t base;
-} idt_pointer_t;
-static idt_entry_t idt[256];
-extern void timer_interrupt_stub(void);
-extern void keyboard_interrupt_stub(void);
-extern void default_interrupt_stub(void);
 static const uint32_t accents[3] = {0xFF7A59, 0x68D8C5, 0xA78BFA};
 
 static const uint8_t font[128][5] = {
@@ -493,7 +479,7 @@ static void draw_mascot(int32_t center_x, int32_t top_y, int32_t scale) {
     fill_rect(center_x - 17 * scale, top_y + 10 * scale, 6 * scale, 12 * scale, hair);
     fill_rect(center_x - 10 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
     fill_rect(center_x + 3 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
-    if ((timer_ticks % 100) < 2) {
+    if (blink_closed) {
         fill_rect(center_x - 9 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
         fill_rect(center_x + 4 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
     } else {
@@ -746,34 +732,6 @@ static void handle_key(uint8_t code) {
     else if (ch == '2' || ch == 'a' || ch == 'A') about_open = 1;
 }
 
-static void set_idt_gate(uint8_t vector, void (*handler)(void)) {
-    uint32_t address = (uint32_t)(uintptr_t)handler;
-    idt[vector].offset_low = (uint16_t)(address & 0xFFFF);
-    idt[vector].selector = 0x08;
-    idt[vector].zero = 0;
-    idt[vector].flags = 0x8E;
-    idt[vector].offset_high = (uint16_t)(address >> 16);
-}
-
-void timer_irq_handler(void) {
-    timer_ticks++;
-    uint32_t phase = timer_ticks % 100;
-    if (phase == 0 || phase == 2) redraw_pending = 1;
-    outb(0x20, 0x20);
-}
-
-void keyboard_irq_handler(void) {
-    uint8_t code = inb(0x60);
-    if (!(code & 0x80)) {
-        serial_print("keyboard scancode: ");
-        serial_hex(code);
-        serial_print("\r\n");
-    }
-    handle_key(code);
-    redraw_pending = 1;
-    outb(0x20, 0x20);
-}
-
 static void wait_keyboard_input_empty(void) {
     for (uint32_t i = 0; i < 1000000; i++) if (!(inb(0x64) & 0x02)) return;
 }
@@ -789,7 +747,7 @@ static void initialize_keyboard(void) {
     outb(0x64, 0x20);
     if (!wait_keyboard_output_full()) return;
     uint8_t config = inb(0x60);
-    config = (uint8_t)((config | 0x01) & (uint8_t)~0x10);
+    config = (uint8_t)(config & (uint8_t)~0x11);
     wait_keyboard_input_empty();
     outb(0x64, 0x60);
     wait_keyboard_input_empty();
@@ -806,33 +764,31 @@ static void initialize_keyboard(void) {
     }
 }
 
-static void setup_interrupts(void) {
-    for (uint32_t i = 0; i < 256; i++) set_idt_gate((uint8_t)i, default_interrupt_stub);
-    set_idt_gate(0x20, timer_interrupt_stub);
-    set_idt_gate(0x21, keyboard_interrupt_stub);
-    idt_pointer_t pointer;
-    pointer.limit = (uint16_t)(sizeof(idt) - 1);
-    pointer.base = (uint32_t)(uintptr_t)&idt;
-    __asm__ volatile("lidt %0" : : "m"(pointer));
-    outb(0x20, 0x11);
-    outb(0xA0, 0x11);
-    outb(0x21, 0x20);
-    outb(0xA1, 0x28);
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
-    outb(0x21, 0x01);
-    outb(0xA1, 0x01);
-    outb(0x21, 0xFF);
-    outb(0xA1, 0xFF);
-    initialize_keyboard();
-    outb(0x21, 0xFC);
-    outb(0xA1, 0xFF);
+static void initialize_pit(void) {
     uint16_t divisor = (uint16_t)(1193182 / 20);
-    outb(0x43, 0x36);
+    outb(0x43, 0x34);
     outb(0x40, (uint8_t)(divisor & 0xFF));
     outb(0x40, (uint8_t)(divisor >> 8));
-    __asm__ volatile("sti");
-    serial_print("interrupts enabled\\r\\n");
+}
+
+static uint16_t read_pit_counter(void) {
+    outb(0x43, 0x00);
+    uint8_t low = inb(0x40);
+    uint8_t high = inb(0x40);
+    return (uint16_t)low | ((uint16_t)high << 8);
+}
+
+static void poll_keyboard(void) {
+    while (inb(0x64) & 0x01) {
+        uint8_t code = inb(0x60);
+        if (!(code & 0x80)) {
+            serial_print("keyboard scancode: ");
+            serial_hex(code);
+            serial_print("\r\n");
+        }
+        handle_key(code);
+        redraw_pending = 1;
+    }
 }
 
 void kernel_main(uint32_t magic, uint32_t info_address) {
@@ -846,21 +802,35 @@ void kernel_main(uint32_t magic, uint32_t info_address) {
     init_graphics(magic, info);
     if (graphics_enabled) serial_print("framebuffer online\r\n");
     else serial_print("VGA text fallback online\r\n");
-    serial_print("Tiny Skide desktop ready\r\n");
-    timer_ticks = 2;
+    shell_welcome();
+    blink_closed = 0;
     draw_desktop();
     redraw_pending = 0;
-    setup_interrupts();
+    initialize_keyboard();
+    initialize_pit();
+    serial_print("Keyboard input ready\r\n");
+    uint16_t previous_counter = read_pit_counter();
     for (;;) {
-        __asm__ volatile("cli");
+        poll_keyboard();
+        uint16_t current_counter = read_pit_counter();
+        if (current_counter > previous_counter) {
+            animation_ticks++;
+            uint32_t phase = animation_ticks % 100;
+            if (phase == 0) {
+                blink_closed = 1;
+                redraw_pending = 1;
+            } else if (phase == 2) {
+                blink_closed = 0;
+                redraw_pending = 1;
+            }
+        }
+        previous_counter = current_counter;
         if (redraw_pending) {
             redraw_pending = 0;
-            __asm__ volatile("sti");
             if (shell_open) draw_terminal();
             else if (about_open) draw_about();
             else draw_desktop();
-        } else {
-            __asm__ volatile("sti; hlt");
         }
+        __asm__ volatile("pause");
     }
 }
