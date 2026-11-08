@@ -51,8 +51,6 @@ static uint8_t green_position = 8;
 static uint8_t blue_position = 0;
 static int graphics_enabled;
 static volatile uint16_t *vga_memory = (volatile uint16_t *)0xB8000;
-static uint8_t vga_row;
-static uint8_t vga_column;
 static uint8_t vga_attribute = 0x1F;
 static char shell_lines[SHELL_ROWS][SHELL_COLS];
 static uint32_t shell_line_count;
