@@ -29,3 +29,16 @@ halt:
     hlt
     jmp halt
 .size _start, . - _start
+
+.global keyboard_interrupt_stub
+.type keyboard_interrupt_stub, @function
+keyboard_interrupt_stub:
+    pusha
+    call keyboard_irq_handler
+    popa
+    iret
+
+.global default_interrupt_stub
+.type default_interrupt_stub, @function
+default_interrupt_stub:
+    iret
