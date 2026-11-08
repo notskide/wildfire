@@ -1,0 +1,67 @@
+name: Build TSkideOS Phone
+
+on:
+  push:
+    branches:
+      - tskideos-phone
+      - main
+    paths:
+      - "app/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - ".github/workflows/build-phone.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-phone:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - name: Checkout TSkideOS
+        uses: actions/checkout@v5
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Install Android SDK packages
+        run: |
+          set -eux
+          set +o pipefail
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          set -o pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build TSkideOS APK
+        run: |
+          set -eux
+          gradle :app:assembleDebug --no-daemon
+          mkdir -p apk-output
+          cp app/build/outputs/apk/debug/app-debug.apk apk-output/TSkideOS-Phone-0.1.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging apk-output/TSkideOS-Phone-0.1.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging apk-output/TSkideOS-Phone-0.1.0.apk | grep "package: name='com.skide.tskideos'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging apk-output/TSkideOS-Phone-0.1.0.apk | grep "sdkVersion:'8'"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c 4 apk-output/TSkideOS-Phone-0.1.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify apk-output/TSkideOS-Phone-0.1.0.apk
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TSkideOS-Phone-0.1.0
+          path: apk-output/TSkideOS-Phone-0.1.0.apk
+          if-no-files-found: error
+          retention-days: 30
