@@ -78,6 +78,7 @@ typedef struct __attribute__((packed)) {
     uint32_t base;
 } idt_pointer_t;
 static idt_entry_t idt[256];
+extern void timer_interrupt_stub(void);
 extern void keyboard_interrupt_stub(void);
 extern void default_interrupt_stub(void);
 static const uint32_t accents[3] = {0xFF7A59, 0x68D8C5, 0xA78BFA};
@@ -751,6 +752,13 @@ static void set_idt_gate(uint8_t vector, void (*handler)(void)) {
     idt[vector].offset_high = (uint16_t)(address >> 16);
 }
 
+void timer_irq_handler(void) {
+    timer_ticks++;
+    uint32_t phase = timer_ticks % 100;
+    if (phase == 0 || phase == 2) redraw_pending = 1;
+    outb(0x20, 0x20);
+}
+
 void keyboard_irq_handler(void) {
     handle_key(inb(0x60));
     redraw_pending = 1;
@@ -759,6 +767,7 @@ void keyboard_irq_handler(void) {
 
 static void setup_interrupts(void) {
     for (uint32_t i = 0; i < 256; i++) set_idt_gate((uint8_t)i, default_interrupt_stub);
+    set_idt_gate(0x20, timer_interrupt_stub);
     set_idt_gate(0x21, keyboard_interrupt_stub);
     idt_pointer_t pointer;
     pointer.limit = (uint16_t)(sizeof(idt) - 1);
@@ -772,8 +781,12 @@ static void setup_interrupts(void) {
     outb(0xA1, 0x02);
     outb(0x21, 0x01);
     outb(0xA1, 0x01);
-    outb(0x21, 0xFD);
+    outb(0x21, 0xFC);
     outb(0xA1, 0xFF);
+    uint16_t divisor = (uint16_t)(1193182 / 20);
+    outb(0x43, 0x36);
+    outb(0x40, (uint8_t)(divisor & 0xFF));
+    outb(0x40, (uint8_t)(divisor >> 8));
     __asm__ volatile("sti");
 }
 
@@ -789,6 +802,7 @@ void kernel_main(uint32_t magic, uint32_t info_address) {
     if (graphics_enabled) serial_print("framebuffer online\r\n");
     else serial_print("VGA text fallback online\r\n");
     serial_print("Tiny Skide desktop ready\r\n");
+    timer_ticks = 2;
     draw_desktop();
     redraw_pending = 0;
     setup_interrupts();
