@@ -401,6 +401,9 @@ static void process_command(void) {
     command[length] = 0;
     while (shell_input[i] == ' ') i++;
     const char *argument = &shell_input[i];
+    serial_print("shell command: ");
+    serial_print(command);
+    serial_print("\r\n");
 
     if (!command[0]) {
         append_line("");
