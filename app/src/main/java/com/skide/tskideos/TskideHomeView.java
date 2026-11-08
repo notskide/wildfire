@@ -19,23 +19,24 @@ import java.util.Locale;
 public class TskideHomeView extends View {
     private static final int HOME = 0;
     private static final int DRAWER = 1;
-    private static final int SETTINGS = 2;
-    private static final int QUICK = 3;
+    private static final int QUICK = 2;
+    private static final int SETTINGS = 3;
     private static final int APPEARANCE = 4;
     private static final int WIRELESS = 5;
     private static final int SOUND = 6;
     private static final int ABOUT = 7;
 
-    private static final int BG = Color.rgb(15, 19, 29);
-    private static final int PANEL = Color.rgb(27, 33, 47);
-    private static final int PANEL_LIGHT = Color.rgb(38, 46, 63);
-    private static final int TEXT = Color.rgb(241, 243, 248);
-    private static final int MUTED = Color.rgb(158, 169, 189);
+    private static final int BG = Color.rgb(13, 17, 25);
+    private static final int PANEL = Color.rgb(25, 32, 44);
+    private static final int PANEL2 = Color.rgb(34, 43, 58);
+    private static final int TEXT = Color.rgb(242, 245, 250);
+    private static final int MUTED = Color.rgb(147, 160, 180);
     private static final int[] ACCENTS = {
-        Color.rgb(239, 123, 97),
-        Color.rgb(102, 190, 174),
-        Color.rgb(145, 153, 226),
-        Color.rgb(225, 174, 91)
+        Color.rgb(115, 190, 180),
+        Color.rgb(232, 137, 112),
+        Color.rgb(145, 157, 224),
+        Color.rgb(224, 183, 105),
+        Color.rgb(164, 145, 198)
     };
 
     private final TskideActivity activity;
@@ -59,6 +60,9 @@ public class TskideHomeView extends View {
         activity = (TskideActivity) context;
         setFocusable(true);
         setFocusableInTouchMode(true);
+        android.content.SharedPreferences preferences = context.getSharedPreferences("tskideos", Context.MODE_PRIVATE);
+        accentIndex = preferences.getInt("accent", 0);
+        if (accentIndex < 0 || accentIndex >= ACCENTS.length) accentIndex = 0;
         brightness = activity.getBrightness();
         reloadApps();
     }
@@ -85,7 +89,7 @@ public class TskideHomeView extends View {
         else if (screen == WIRELESS) drawWireless(canvas);
         else if (screen == SOUND) drawSound(canvas);
         else if (screen == ABOUT) drawAbout(canvas);
-        drawNavigation(canvas);
+        drawBottomBar(canvas);
         canvas.restore();
         postInvalidateDelayed(1000);
     }
@@ -93,74 +97,89 @@ public class TskideHomeView extends View {
     private void drawWallpaper(Canvas canvas) {
         canvas.drawColor(BG);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.rgb(24, 32, 48));
-        canvas.drawCircle(208, 70, 93, paint);
-        paint.setColor(Color.rgb(21, 39, 50));
-        canvas.drawCircle(12, 240, 105, paint);
-        paint.setColor(Color.argb(22, 255, 255, 255));
-        canvas.drawCircle(192, 237, 72, paint);
+        paint.setColor(Color.rgb(22, 34, 43));
+        canvas.drawCircle(218, 70, 105, paint);
+        paint.setColor(Color.rgb(19, 27, 42));
+        canvas.drawCircle(4, 252, 120, paint);
+        paint.setColor(Color.argb(18, 255, 255, 255));
+        canvas.drawCircle(185, 225, 70, paint);
     }
 
     private void drawStatus(Canvas canvas) {
-        fill(canvas, 0, 0, 240, 25, Color.rgb(10, 13, 21));
-        text(canvas, "TSKIDEOS", 11, 16, 9, TEXT, true);
-        text(canvas, "PHONE EDITION", 155, 16, 7, MUTED, true);
+        fill(canvas, 0, 0, 240, 23, Color.rgb(8, 12, 18));
+        text(canvas, new SimpleDateFormat("h:mm", Locale.getDefault()).format(new Date()), 10, 15, 9, TEXT, true);
+        int right = 229;
+        drawBattery(canvas, right - 15, 7, activity.getBatteryLevel());
+        text(canvas, activity.isCharging() ? "+" : "", right - 27, 15, 8, accent(), true);
+        if (activity.isWifiEnabled()) drawWifi(canvas, right - 44, 11, true);
+        if (activity.isBluetoothEnabled()) drawBluetooth(canvas, right - 57, 11, true);
+        fill(canvas, 0, 23, 240, 1, Color.argb(35, 255, 255, 255));
     }
 
     private void drawHome(Canvas canvas) {
         drawStatus(canvas);
         if (homePage == 0) {
-            text(canvas, new SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(new Date()).toUpperCase(Locale.US), 16, 49, 8, MUTED, true);
-            String time = new SimpleDateFormat("h:mm", Locale.getDefault()).format(new Date());
-            text(canvas, time, 14, 91, 39, TEXT, false);
-            text(canvas, "A fresh start for your phone.", 17, 109, 9, MUTED, false);
-            round(canvas, 12, 126, 216, 68, PANEL, 10);
-            text(canvas, "YOUR PHONE", 24, 146, 8, accent(), true);
-            text(canvas, "Small, simple, and yours.", 24, 165, 12, TEXT, true);
-            text(canvas, activity.getBatteryLevel() + "% battery", 24, 182, 8, MUTED, false);
-            text(canvas, "FAVOURITES", 16, 215, 8, MUTED, true);
-            round(canvas, 10, 225, 220, 66, PANEL, 12);
-            drawShortcut(canvas, 39, "Phone", 0);
-            drawShortcut(canvas, 93, "Messages", 1);
-            drawShortcut(canvas, 147, "Browser", 2);
-            drawShortcut(canvas, 201, "Apps", 3);
-            text(canvas, "SWIPE UP FOR ALL APPS", 66, 304, 7, MUTED, true);
+            text(canvas, new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(new Date()).toUpperCase(Locale.US), 16, 49, 8, MUTED, true);
+            text(canvas, new SimpleDateFormat("h:mm", Locale.getDefault()).format(new Date()), 13, 94, 42, TEXT, false);
+            text(canvas, "YOUR DAY, AT A GLANCE", 17, 111, 7, MUTED, true);
+            round(canvas, 12, 128, 216, 69, PANEL, 11);
+            fill(canvas, 12, 128, 3, 69, accent());
+            text(canvas, "TSKIDEOS", 25, 148, 8, accent(), true);
+            text(canvas, "A little room to breathe.", 25, 168, 12, TEXT, true);
+            text(canvas, activity.getBatteryLevel() + "% battery" + (activity.isCharging() ? " · charging" : ""), 25, 185, 8, MUTED, false);
+            text(canvas, "FAVOURITES", 16, 218, 8, MUTED, true);
+            round(canvas, 9, 226, 222, 65, PANEL, 12);
+            drawShortcut(canvas, 36, "Phone", 0);
+            drawShortcut(canvas, 92, "Messages", 1);
+            drawShortcut(canvas, 148, "Browser", 2);
+            drawShortcut(canvas, 204, "Apps", 3);
+            centered(canvas, "SWIPE UP FOR ALL APPS", 120, 299, 7, MUTED, true);
         } else {
-            text(canvas, "YOUR SPACE", 16, 53, 9, MUTED, true);
-            text(canvas, "Pick up where you left off.", 16, 77, 16, TEXT, true);
-            round(canvas, 12, 98, 216, 184, PANEL, 10);
-            text(canvas, "INSTALLED APPS", 24, 119, 8, accent(), true);
-            for (int i = 0; i < 6 && i < apps.size(); i++) {
+            text(canvas, "YOUR APPS", 16, 52, 9, MUTED, true);
+            text(canvas, "Your favourites.", 16, 76, 19, TEXT, true);
+            round(canvas, 12, 94, 216, 188, PANEL, 11);
+            int count = Math.min(6, apps.size());
+            for (int i = 0; i < count; i++) {
                 int col = i % 3;
                 int row = i / 3;
-                drawApp(canvas, apps.get(i), 40 + col * 80, 157 + row * 78, 31, true);
+                drawApp(canvas, apps.get(i), 48 + col * 72, 145 + row * 78, 32);
             }
-            text(canvas, "SWIPE DOWN TO RETURN", 70, 304, 7, MUTED, true);
+            if (count == 0) centered(canvas, "No apps found", 120, 180, 9, MUTED, false);
+            centered(canvas, "SWIPE LEFT OR UP FOR MORE", 120, 299, 7, MUTED, true);
         }
+        drawPageDots(canvas);
     }
 
     private void drawShortcut(Canvas canvas, int x, String label, int kind) {
         drawSymbol(canvas, x, 252, kind, accent());
-        centered(canvas, label, x, 278, 7, TEXT, true);
+        centered(canvas, label, x, 280, 7, TEXT, true);
+    }
+
+    private void drawPageDots(Canvas canvas) {
+        paint.setStyle(Paint.Style.FILL);
+        for (int i = 0; i < 2; i++) {
+            paint.setColor(i == homePage ? accent() : Color.rgb(80, 91, 108));
+            canvas.drawCircle(114 + i * 12, 310, i == homePage ? 2.5f : 2, paint);
+        }
     }
 
     private void drawDrawer(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "ALL APPS", 15, 48, 15, TEXT, true);
-        text(canvas, apps.size() + " installed", 16, 62, 8, MUTED, false);
+        text(canvas, "APPS", 15, 49, 19, TEXT, true);
+        text(canvas, apps.size() + " available on this phone", 16, 65, 8, MUTED, false);
         int visible = 12;
         for (int i = 0; i < visible; i++) {
             int index = appOffset + i;
             if (index >= apps.size()) break;
             int col = i % 3;
             int row = i / 3;
-            drawApp(canvas, apps.get(index), 40 + col * 80, 91 + row * 52, 29, false);
+            drawApp(canvas, apps.get(index), 40 + col * 80, 100 + row * 49, 27);
         }
-        if (apps.size() == 0) centered(canvas, "No launchable apps found", 120, 170, 10, MUTED, false);
-        text(canvas, "TAP AN APP  ·  SWIPE TO SCROLL", 49, 294, 7, MUTED, true);
+        if (apps.size() == 0) centered(canvas, "No launchable apps found", 120, 170, 9, MUTED, false);
+        centered(canvas, "TAP AN APP  ·  SWIPE TO SCROLL", 120, 291, 7, MUTED, true);
     }
 
-    private void drawApp(Canvas canvas, TskideActivity.AppEntry app, int centerX, int centerY, int size, boolean large) {
+    private void drawApp(Canvas canvas, TskideActivity.AppEntry app, int centerX, int centerY, int size) {
         if (app.icon != null) {
             canvas.save();
             app.icon.setBounds(centerX - size / 2, centerY - size / 2, centerX + size / 2, centerY + size / 2);
@@ -170,102 +189,104 @@ public class TskideHomeView extends View {
             }
             canvas.restore();
         } else {
-            round(canvas, centerX - size / 2, centerY - size / 2, size, size, PANEL_LIGHT, 8);
-            centered(canvas, app.label.substring(0, 1).toUpperCase(Locale.US), centerX, centerY + 4, 14, accent(), true);
+            round(canvas, centerX - size / 2, centerY - size / 2, size, size, PANEL2, 8);
+            String initial = app.label.length() == 0 ? "?" : app.label.substring(0, 1).toUpperCase(Locale.US);
+            centered(canvas, initial, centerX, centerY + 4, 13, accent(), true);
         }
-        centered(canvas, shorten(app.label, large ? 10 : 12), centerX, centerY + size / 2 + 12, 7, TEXT, false);
+        centered(canvas, shorten(app.label, 11), centerX, centerY + size / 2 + 12, 7, TEXT, false);
     }
 
     private void drawQuick(Canvas canvas) {
         drawStatus(canvas);
-        round(canvas, 8, 32, 224, 260, PANEL, 13);
-        text(canvas, "CONTROL CENTRE", 20, 54, 11, TEXT, true);
-        text(canvas, new SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(new Date()), 20, 68, 8, MUTED, false);
-        drawToggle(canvas, 18, 82, 98, 52, "Wi-Fi", activity.isWifiEnabled());
-        drawToggle(canvas, 124, 82, 98, 52, "Bluetooth", activity.isBluetoothEnabled());
-        drawToggle(canvas, 18, 144, 98, 52, "Silent", activity.isSilent());
-        drawToggle(canvas, 124, 144, 98, 52, "Settings", false);
-        text(canvas, "BRIGHTNESS", 20, 221, 8, MUTED, true);
-        drawSlider(canvas, brightness, 20, 239, 200);
-        text(canvas, "DRAG THE DOT TO ADJUST", 20, 263, 7, MUTED, false);
-        text(canvas, "TAP OUTSIDE OR SWIPE UP TO CLOSE", 25, 280, 7, MUTED, false);
+        round(canvas, 8, 31, 224, 260, PANEL, 13);
+        text(canvas, "CONTROL CENTRE", 19, 53, 11, TEXT, true);
+        text(canvas, new SimpleDateFormat("EEEE, d MMM", Locale.getDefault()).format(new Date()), 19, 68, 8, MUTED, false);
+        drawToggle(canvas, 17, 82, 99, 51, "Wi-Fi", activity.isWifiEnabled());
+        drawToggle(canvas, 124, 82, 99, 51, "Bluetooth", activity.isBluetoothEnabled());
+        drawToggle(canvas, 17, 143, 99, 51, "Silent", activity.isSilent());
+        drawToggle(canvas, 124, 143, 99, 51, "Settings", false);
+        text(canvas, "BRIGHTNESS", 19, 220, 8, MUTED, true);
+        drawSlider(canvas, brightness, 20, 238, 200);
+        text(canvas, "TAP OR DRAG TO ADJUST", 19, 261, 7, MUTED, false);
+        centered(canvas, "SWIPE UP TO CLOSE", 120, 280, 7, MUTED, true);
     }
 
     private void drawSettings(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "SETTINGS", 15, 52, 17, TEXT, true);
-        text(canvas, "Make this phone yours.", 16, 69, 8, MUTED, false);
-        drawSettingRow(canvas, 14, 88, "Appearance", "Accent and brightness", "A");
-        drawSettingRow(canvas, 14, 139, "Wireless", "Wi-Fi and Bluetooth", "W");
-        drawSettingRow(canvas, 14, 190, "Sound", "Ringer and silent mode", "S");
-        drawSettingRow(canvas, 14, 241, "About TSkideOS", "Phone edition 0.1.0", "i");
+        text(canvas, "SETTINGS", 15, 53, 20, TEXT, true);
+        text(canvas, "Make this phone yours.", 16, 70, 8, MUTED, false);
+        drawSettingRow(canvas, 13, 88, "Appearance", "Colour and brightness", "A");
+        drawSettingRow(canvas, 13, 139, "Connections", "Wi-Fi and Bluetooth", "W");
+        drawSettingRow(canvas, 13, 190, "Sound", "Ringer and silent mode", "S");
+        drawSettingRow(canvas, 13, 241, "About TSkideOS", "Version and device", "i");
     }
 
-    private void drawSettingRow(Canvas canvas, int x, int y, String title, String subtitle, String icon) {
-        round(canvas, x, y, 212, 43, PANEL, 8);
-        round(canvas, x + 9, y + 9, 25, 25, PANEL_LIGHT, 7);
-        centered(canvas, icon, x + 21, y + 26, 10, accent(), true);
+    private void drawSettingRow(Canvas canvas, int x, int y, String title, String subtitle, String symbol) {
+        round(canvas, x, y, 214, 43, PANEL, 9);
+        round(canvas, x + 9, y + 9, 25, 25, PANEL2, 7);
+        centered(canvas, symbol, x + 21, y + 26, 10, accent(), true);
         text(canvas, title, x + 44, y + 18, 10, TEXT, true);
         text(canvas, subtitle, x + 44, y + 32, 7, MUTED, false);
-        fill(canvas, x + 194, y + 18, 5, 7, MUTED);
+        text(canvas, "›", x + 195, y + 27, 15, MUTED, false);
     }
 
     private void drawAppearance(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "APPEARANCE", 15, 52, 16, TEXT, true);
-        text(canvas, "Choose a little colour.", 16, 69, 8, MUTED, false);
-        round(canvas, 13, 88, 214, 82, PANEL, 9);
+        text(canvas, "APPEARANCE", 15, 53, 17, TEXT, true);
+        text(canvas, "A look that feels like yours.", 16, 70, 8, MUTED, false);
+        round(canvas, 13, 87, 214, 103, PANEL, 10);
         text(canvas, "ACCENT COLOUR", 24, 108, 8, MUTED, true);
         for (int i = 0; i < ACCENTS.length; i++) {
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(ACCENTS[i]);
-            canvas.drawCircle(42 + i * 51, 137, 13, paint);
+            canvas.drawCircle(35 + i * 42, 143, 11, paint);
             if (i == accentIndex) {
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setStrokeWidth(2);
                 paint.setColor(TEXT);
-                canvas.drawCircle(42 + i * 51, 137, 17, paint);
+                canvas.drawCircle(35 + i * 42, 143, 15, paint);
                 paint.setStyle(Paint.Style.FILL);
             }
         }
-        round(canvas, 13, 181, 214, 83, PANEL, 9);
-        text(canvas, "SCREEN BRIGHTNESS", 24, 203, 8, MUTED, true);
-        drawSlider(canvas, brightness, 24, 224, 190);
-        text(canvas, brightness + "%", 24, 249, 8, TEXT, true);
+        text(canvas, "Changes are saved automatically.", 24, 174, 7, MUTED, false);
+        round(canvas, 13, 201, 214, 75, PANEL, 10);
+        text(canvas, "SCREEN BRIGHTNESS", 24, 222, 8, MUTED, true);
+        drawSlider(canvas, brightness, 24, 241, 190);
+        text(canvas, brightness + "%", 24, 263, 8, TEXT, true);
     }
 
     private void drawWireless(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "WIRELESS", 15, 52, 17, TEXT, true);
-        drawToggle(canvas, 14, 78, 212, 58, "Wi-Fi", activity.isWifiEnabled());
-        drawToggle(canvas, 14, 148, 212, 58, "Bluetooth", activity.isBluetoothEnabled());
-        round(canvas, 14, 219, 212, 42, PANEL, 8);
-        text(canvas, "MORE CONNECTION SETTINGS", 25, 245, 8, TEXT, true);
+        text(canvas, "CONNECTIONS", 15, 53, 17, TEXT, true);
+        drawToggle(canvas, 14, 81, 212, 57, "Wi-Fi", activity.isWifiEnabled());
+        drawToggle(canvas, 14, 151, 212, 57, "Bluetooth", activity.isBluetoothEnabled());
+        round(canvas, 14, 222, 212, 43, PANEL, 9);
+        text(canvas, "MORE CONNECTION SETTINGS", 25, 248, 8, TEXT, true);
     }
 
     private void drawSound(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "SOUND", 15, 52, 17, TEXT, true);
-        drawToggle(canvas, 14, 82, 212, 64, "Silent mode", activity.isSilent());
-        round(canvas, 14, 164, 212, 52, PANEL, 8);
-        text(canvas, "RINGER AND VOLUME", 26, 194, 9, TEXT, true);
-        text(canvas, "Use Android sound settings", 26, 207, 7, MUTED, false);
+        text(canvas, "SOUND", 15, 53, 19, TEXT, true);
+        drawToggle(canvas, 14, 83, 212, 62, "Silent mode", activity.isSilent());
+        round(canvas, 14, 162, 212, 55, PANEL, 9);
+        text(canvas, "RINGER AND VOLUME", 26, 190, 9, TEXT, true);
+        text(canvas, "Open the phone's sound controls", 26, 205, 7, MUTED, false);
     }
 
     private void drawAbout(Canvas canvas) {
         drawStatus(canvas);
-        text(canvas, "ABOUT", 15, 52, 17, TEXT, true);
-        round(canvas, 13, 78, 214, 184, PANEL, 11);
-        centered(canvas, "TSKIDEOS", 120, 120, 19, TEXT, true);
-        centered(canvas, "PHONE EDITION 0.1.0", 120, 141, 8, accent(), true);
-        centered(canvas, "A small, touch-first system", 120, 174, 9, MUTED, false);
-        centered(canvas, "made for the HTC Wildfire.", 120, 188, 9, MUTED, false);
-        centered(canvas, "Built for a 240 × 320 screen.", 120, 214, 8, TEXT, false);
-        centered(canvas, "ARMv6 · Android 2.2+", 120, 235, 8, MUTED, false);
+        text(canvas, "ABOUT", 15, 53, 19, TEXT, true);
+        round(canvas, 13, 83, 214, 180, PANEL, 11);
+        centered(canvas, "TSKIDEOS", 120, 125, 21, TEXT, true);
+        centered(canvas, "PHONE EDITION 0.2.0", 120, 146, 8, accent(), true);
+        centered(canvas, "A lighter home for your Wildfire.", 120, 179, 8, MUTED, false);
+        centered(canvas, "Designed for a 240 × 320 screen.", 120, 202, 8, TEXT, false);
+        centered(canvas, "Android 2.2+ · ARMv6 device", 120, 225, 7, MUTED, false);
+        centered(canvas, "Built small. Made yours.", 120, 245, 8, accent(), true);
     }
 
     private void drawToggle(Canvas canvas, int x, int y, int w, int h, String label, boolean enabled) {
-        round(canvas, x, y, w, h, enabled ? accent() : PANEL_LIGHT, 9);
+        round(canvas, x, y, w, h, enabled ? accent() : PANEL2, 9);
         text(canvas, label, x + 11, y + 20, 9, enabled ? BG : TEXT, true);
         text(canvas, enabled ? "ON" : "OFF", x + 11, y + 36, 7, enabled ? BG : MUTED, true);
         paint.setColor(enabled ? BG : MUTED);
@@ -274,7 +295,7 @@ public class TskideHomeView extends View {
     }
 
     private void drawSlider(Canvas canvas, int value, int x, int y, int width) {
-        round(canvas, x, y, width, 4, PANEL_LIGHT, 2);
+        round(canvas, x, y, width, 4, PANEL2, 2);
         round(canvas, x, y, width * value / 100, 4, accent(), 2);
         paint.setColor(TEXT);
         paint.setStyle(Paint.Style.FILL);
@@ -284,7 +305,7 @@ public class TskideHomeView extends View {
     private void drawWifi(Canvas canvas, int x, int y, boolean enabled) {
         paint.setColor(enabled ? TEXT : MUTED);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(1.3f);
+        paint.setStrokeWidth(1.2f);
         RectF arc = new RectF(x - 5, y - 6, x + 5, y + 4);
         canvas.drawArc(arc, 220, 100, false, paint);
         arc.inset(2, 2);
@@ -309,7 +330,7 @@ public class TskideHomeView extends View {
         paint.setStyle(Paint.Style.FILL);
     }
 
-    private void drawBattery(Canvas canvas, int x, int y, int level, boolean charging) {
+    private void drawBattery(Canvas canvas, int x, int y, int level) {
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(1);
         paint.setColor(TEXT);
@@ -321,19 +342,19 @@ public class TskideHomeView extends View {
     }
 
     private void drawSymbol(Canvas canvas, int x, int y, int kind, int color) {
-        round(canvas, x - 17, y - 17, 34, 34, kind == 3 ? accent() : PANEL_LIGHT, 11);
+        round(canvas, x - 17, y - 17, 34, 34, kind == 3 ? accent() : PANEL2, 11);
         paint.setColor(color);
         paint.setStrokeWidth(2);
         paint.setStyle(Paint.Style.STROKE);
         if (kind == 0) {
-            Path p = new Path();
-            p.moveTo(x - 6, y - 10);
-            p.cubicTo(x - 12, y - 8, x + 5, y + 13, x + 10, y + 5);
-            p.lineTo(x + 4, y);
-            p.lineTo(x, y + 4);
-            p.lineTo(x - 5, y - 4);
-            p.lineTo(x - 2, y - 8);
-            canvas.drawPath(p, paint);
+            Path path = new Path();
+            path.moveTo(x - 6, y - 10);
+            path.cubicTo(x - 12, y - 8, x + 5, y + 13, x + 10, y + 5);
+            path.lineTo(x + 4, y);
+            path.lineTo(x, y + 4);
+            path.lineTo(x - 5, y - 4);
+            path.lineTo(x - 2, y - 8);
+            canvas.drawPath(path, paint);
         } else if (kind == 1) {
             RectF bubble = new RectF(x - 10, y - 8, x + 10, y + 6);
             canvas.drawRoundRect(bubble, 4, 4, paint);
@@ -346,7 +367,6 @@ public class TskideHomeView extends View {
             canvas.drawCircle(x, y, 10, paint);
             canvas.drawArc(new RectF(x - 5, y - 10, x + 5, y + 10), 0, 360, false, paint);
             canvas.drawLine(x - 9, y, x + 9, y, paint);
-            canvas.drawArc(new RectF(x - 9, y - 5, x + 9, y + 5), 0, 180, false, paint);
         } else {
             paint.setStyle(Paint.Style.FILL);
             canvas.drawRoundRect(new RectF(x - 10, y - 10, x - 2, y - 2), 2, 2, paint);
@@ -357,9 +377,9 @@ public class TskideHomeView extends View {
         paint.setStyle(Paint.Style.FILL);
     }
 
-    private void drawNavigation(Canvas canvas) {
-        fill(canvas, 0, 299, 240, 21, Color.argb(110, 5, 7, 12));
-        round(canvas, 99, 307, 42, 3, Color.rgb(133, 143, 160), 2);
+    private void drawBottomBar(Canvas canvas) {
+        fill(canvas, 0, 300, 240, 20, Color.argb(175, 7, 10, 16));
+        round(canvas, 99, 307, 42, 3, Color.rgb(139, 151, 169), 2);
     }
 
     private void fill(Canvas canvas, float x, float y, float w, float h, int color) {
@@ -413,16 +433,18 @@ public class TskideHomeView extends View {
         }
         if (event.getAction() == MotionEvent.ACTION_MOVE) {
             if (Math.abs(x - downX) > 12 || Math.abs(y - downY) > 12) moved = true;
+            if (screen == QUICK && downY >= 220 && downY <= 260 && Math.abs(x - downX) > 2) {
+                brightness = Math.max(10, Math.min(100, (int)((x - 20) * 100 / 200)));
+                activity.setBrightness(brightness);
+                invalidate();
+            }
             return true;
         }
         if (event.getAction() == MotionEvent.ACTION_UP) {
             float dx = x - downX;
             float dy = y - downY;
-            if (Math.abs(dx) > 35 || Math.abs(dy) > 35) {
-                handleSwipe(dx, dy);
-            } else if (!moved) {
-                handleTap(x, y);
-            }
+            if (Math.abs(dx) > 35 || Math.abs(dy) > 35) handleSwipe(dx, dy);
+            else if (!moved) handleTap(x, y);
             performClick();
             invalidate();
             return true;
@@ -437,7 +459,7 @@ public class TskideHomeView extends View {
     }
 
     private void handleSwipe(float dx, float dy) {
-        if (downY <= 28 && dy > 35 && screen != QUICK) {
+        if (downY <= 25 && dy > 35 && screen != QUICK) {
             returnScreen = screen;
             screen = QUICK;
         } else if (screen == QUICK && dy < -35) {
@@ -450,14 +472,14 @@ public class TskideHomeView extends View {
         } else if (screen == HOME && dy > 35) {
             homePage = 0;
         } else if (screen == DRAWER && Math.abs(dy) > Math.abs(dx)) {
-            int rows = Math.max(1, apps.size() / 3 + (apps.size() % 3 == 0 ? 0 : 1));
+            int rows = apps.size() / 3 + (apps.size() % 3 == 0 ? 0 : 1);
             int maxOffset = Math.max(0, rows - 4) * 3;
             appOffset = Math.max(0, Math.min(maxOffset, appOffset + (dy < 0 ? 3 : -3)));
         }
     }
 
     private void handleTap(float x, float y) {
-        if (y >= 299) {
+        if (y >= 300) {
             if (x < 78) navigateBack();
             else if (x > 162) {
                 screen = DRAWER;
@@ -468,43 +490,38 @@ public class TskideHomeView extends View {
             }
             return;
         }
-        if (screen != QUICK && y <= 25) {
+        if (screen != QUICK && y <= 23) {
             returnScreen = screen;
             screen = QUICK;
             return;
         }
         if (screen == QUICK) {
-            if (y >= 82 && y <= 134) {
+            if (y >= 82 && y <= 133) {
                 if (x < 120) activity.toggleWifi();
                 else activity.toggleBluetooth();
-            } else if (y >= 144 && y <= 196) {
+            } else if (y >= 143 && y <= 194) {
                 if (x < 120) activity.toggleSilent();
-                else {
-                    screen = SETTINGS;
-                    return;
-                }
-            } else if (y >= 222 && y <= 258) {
+                else screen = SETTINGS;
+            } else if (y >= 222 && y <= 260) {
                 brightness = Math.max(10, Math.min(100, (int)((x - 20) * 100 / 200)));
                 activity.setBrightness(brightness);
-            } else if (y < 75) {
-                screen = returnScreen;
-            }
+            } else if (y < 75) screen = returnScreen;
             return;
         }
         if (screen == HOME) {
-            if (homePage == 0 && y >= 225 && y < 294) {
-                if (x < 66) activity.launchByHint("phone");
+            if (homePage == 0 && y >= 226 && y < 294) {
+                if (x < 64) activity.launchByHint("phone");
                 else if (x < 120) activity.launchByHint("messag");
-                else if (x < 174) activity.launchByHint("browser");
+                else if (x < 176) activity.launchByHint("browser");
                 else {
                     screen = DRAWER;
                     appOffset = 0;
                 }
-            } else if (homePage == 0 && y >= 126 && y <= 194) {
+            } else if (homePage == 0 && y >= 128 && y <= 197) {
                 screen = SETTINGS;
-            } else if (homePage == 1 && y >= 120 && y <= 282) {
+            } else if (homePage == 1 && y >= 94 && y <= 282) {
                 int col = Math.max(0, Math.min(2, (int)(x / 80)));
-                int row = y < 200 ? 0 : 1;
+                int row = y < 183 ? 0 : 1;
                 int index = row * 3 + col;
                 if (index < apps.size()) activity.launchPackage(apps.get(index).packageName);
             } else if (y < 100) {
@@ -514,13 +531,13 @@ public class TskideHomeView extends View {
             return;
         }
         if (screen == DRAWER) {
-            if (y < 64) {
+            if (y < 68) {
                 returnScreen = DRAWER;
                 screen = QUICK;
                 return;
             }
             int col = Math.max(0, Math.min(2, (int)(x / 80)));
-            int row = Math.max(0, Math.min(3, (int)((y - 65) / 52)));
+            int row = Math.max(0, Math.min(3, (int)((y - 75) / 49)));
             int index = appOffset + row * 3 + col;
             if (index >= 0 && index < apps.size()) activity.launchPackage(apps.get(index).packageName);
             return;
@@ -533,53 +550,40 @@ public class TskideHomeView extends View {
             return;
         }
         if (screen == APPEARANCE) {
-            if (y >= 115 && y <= 158) {
-                int selected = Math.round((x - 42) / 51.0f);
+            if (y >= 122 && y <= 163) {
+                int selected = Math.round((x - 35) / 42.0f);
                 accentIndex = Math.max(0, Math.min(ACCENTS.length - 1, selected));
-            } else if (y >= 212 && y <= 242) {
+                activity.getSharedPreferences("tskideos", Context.MODE_PRIVATE).edit().putInt("accent", accentIndex).commit();
+            } else if (y >= 229 && y <= 253) {
                 brightness = Math.max(10, Math.min(100, (int)((x - 24) * 100 / 190)));
                 activity.setBrightness(brightness);
             }
             return;
         }
         if (screen == WIRELESS) {
-            if (y >= 78 && y < 136) activity.toggleWifi();
-            else if (y >= 148 && y < 206) activity.toggleBluetooth();
-            else if (y >= 219 && y < 264) activity.openWifiSettings();
+            if (y >= 81 && y < 138) activity.toggleWifi();
+            else if (y >= 151 && y < 208) activity.toggleBluetooth();
+            else if (y >= 222 && y < 266) activity.openWifiSettings();
             return;
         }
         if (screen == SOUND) {
-            if (y >= 82 && y < 146) activity.toggleSilent();
-            else if (y >= 164 && y < 220) activity.openSystemSettings();
+            if (y >= 83 && y < 145) activity.toggleSilent();
+            else if (y >= 162 && y < 220) activity.openSystemSettings();
             return;
         }
-        if (screen == ABOUT) {
-            if (y >= 78 && y <= 262) screen = SETTINGS;
-        }
+        if (screen == ABOUT && y >= 83 && y <= 263) screen = SETTINGS;
     }
 
     public boolean navigateBack() {
-        if (screen == QUICK) {
-            screen = returnScreen;
-            invalidate();
-            return true;
-        }
-        if (screen == DRAWER || screen == SETTINGS) {
+        if (screen == QUICK) screen = returnScreen;
+        else if (screen == DRAWER) screen = HOME;
+        else if (screen == SETTINGS) {
             screen = HOME;
             homePage = 0;
-            invalidate();
-            return true;
-        }
-        if (screen == APPEARANCE || screen == WIRELESS || screen == SOUND || screen == ABOUT) {
-            screen = SETTINGS;
-            invalidate();
-            return true;
-        }
-        if (screen == HOME && homePage != 0) {
-            homePage = 0;
-            invalidate();
-            return true;
-        }
-        return false;
+        } else if (screen == APPEARANCE || screen == WIRELESS || screen == SOUND || screen == ABOUT) screen = SETTINGS;
+        else if (screen == HOME && homePage != 0) homePage = 0;
+        else return false;
+        invalidate();
+        return true;
     }
 }
