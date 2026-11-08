@@ -341,8 +341,8 @@ static void append_number_line(const char *prefix, uint32_t value, const char *s
 
 static void shell_welcome(void) {
     shell_line_count = 0;
-    append_line("HEY SKIDE! TINY SKIDE HERE.");
-    append_line("WELCOME TO YOUR TSKIDEOS SHELL.");
+    append_line("TSKIDEOS KERNEL ONLINE.");
+    append_line("WELCOME TO THE SKSH SHELL.");
     append_line("TYPE HELP IF YOU NEED ANYTHING.");
     append_line("");
 }
@@ -356,10 +356,10 @@ static void shell_help(void) {
 }
 
 static void shell_about(void) {
-    append_line("TSKIDEOS 0.2.0");
-    append_line("A SMALL OS WITH A LITTLE BUDDY.");
+    append_line("TSKIDEOS 0.3.0");
+    append_line("AN INDEPENDENT X86 OPERATING SYSTEM.");
     append_line("BUILT FOR X86 AND QEMU.");
-    append_line("TINY SKIDE SAYS HELLO!");
+    append_line("GRAPHICS, KEYBOARD AND SHELL READY.");
 }
 
 static void reboot_machine(void) {
@@ -400,17 +400,17 @@ static void process_command(void) {
     } else if (text_equal(command, "whoami")) {
         append_line("YOU ARE SKIDE.");
     } else if (text_equal(command, "ver") || text_equal(command, "version")) {
-        append_line("TSKIDEOS VERSION 0.2.0");
+        append_line("TSKIDEOS VERSION 0.3.0");
     } else if (text_equal(command, "neofetch")) {
-        append_line("TINY SKIDE / TSKIDEOS");
+        append_line("TSKIDEOS SYSTEM");
         append_line("---------------------");
-        append_line("KERNEL: TSKIDE 0.2.0");
+        append_line("KERNEL: TSKIDE 0.3.0");
         append_line("ARCH: I386 ON QEMU");
         append_line("SHELL: SKSH");
         append_line("DISPLAY: FRAMEBUFFER");
     } else if (text_equal(command, "hello") || text_equal(command, "hi") || text_equal(command, "hey")) {
-        append_line("HEYYY SKIDE! GOOD TO SEE YOU.");
-        append_line("I'M JUST CHILLING IN YOUR OS.");
+        append_line("HELLO SKIDE. TSKIDEOS IS READY.");
+        append_line("SYSTEM STATUS: RUNNING.");
     } else if (text_equal(command, "joke")) {
         append_line("WHY DID THE BYTE VISIT THE DOCTOR?");
         append_line("IT WAS FEELING A LITTLE BIT OFF.");
@@ -420,7 +420,7 @@ static void process_command(void) {
     } else if (text_equal(command, "ping")) {
         append_line("PONG! I'M RIGHT HERE.");
     } else if (text_equal(command, "buddy") || text_equal(command, "skide")) {
-        append_line("TINY SKIDE, AT YOUR SERVICE.");
+        append_line("TSKIDEOS SYSTEM SHELL ONLINE.");
     } else if (text_equal(command, "mem")) {
         append_number_line("LOW MEMORY: ", memory_lower, " KB");
         append_number_line("HIGH MEMORY: ", memory_upper, " KB");
@@ -451,43 +451,15 @@ static uint32_t accent(void) {
     return rgb((uint8_t)(value >> 16), (uint8_t)(value >> 8), (uint8_t)value);
 }
 
-static void draw_mascot(int32_t center_x, int32_t top_y, int32_t scale) {
-    uint32_t hair = rgb(35, 26, 25);
-    uint32_t skin = rgb(174, 111, 78);
-    uint32_t shirt = rgb(190, 196, 201);
-    uint32_t shirt_shadow = rgb(133, 145, 154);
-    uint32_t pants = rgb(42, 48, 64);
-    uint32_t shoes = rgb(24, 27, 36);
-    uint32_t eye = rgb(28, 24, 26);
-    int32_t left = center_x - 17 * scale;
-    fill_rect(center_x - 25 * scale, top_y + 87 * scale, 50 * scale, 5 * scale, rgb(25, 31, 54));
-    fill_rect(left + 7 * scale, top_y + 65 * scale, 11 * scale, 21 * scale, pants);
-    fill_rect(left + 21 * scale, top_y + 65 * scale, 11 * scale, 21 * scale, pants);
-    fill_rect(left + 5 * scale, top_y + 82 * scale, 14 * scale, 5 * scale, shoes);
-    fill_rect(left + 20 * scale, top_y + 82 * scale, 14 * scale, 5 * scale, shoes);
-    fill_rect(left + 4 * scale, top_y + 39 * scale, 29 * scale, 29 * scale, shirt);
-    fill_rect(left + 4 * scale, top_y + 62 * scale, 29 * scale, 5 * scale, shirt_shadow);
-    fill_rect(left, top_y + 43 * scale, 7 * scale, 23 * scale, shirt);
-    fill_rect(left + 30 * scale, top_y + 43 * scale, 7 * scale, 23 * scale, shirt);
-    fill_rect(left + 1 * scale, top_y + 61 * scale, 6 * scale, 7 * scale, skin);
-    fill_rect(left + 30 * scale, top_y + 61 * scale, 6 * scale, 7 * scale, skin);
-    fill_rect(center_x - 5 * scale, top_y + 34 * scale, 10 * scale, 8 * scale, skin);
-    fill_rect(center_x - 14 * scale, top_y + 8 * scale, 28 * scale, 27 * scale, skin);
-    fill_rect(center_x - 17 * scale, top_y + 14 * scale, 4 * scale, 13 * scale, skin);
-    fill_rect(center_x + 13 * scale, top_y + 14 * scale, 4 * scale, 13 * scale, skin);
-    fill_rect(center_x - 16 * scale, top_y + 4 * scale, 32 * scale, 13 * scale, hair);
-    fill_rect(center_x - 17 * scale, top_y + 10 * scale, 6 * scale, 12 * scale, hair);
-    fill_rect(center_x - 10 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
-    fill_rect(center_x + 3 * scale, top_y + 15 * scale, 6 * scale, 3 * scale, skin);
-    if (blink_closed) {
-        fill_rect(center_x - 9 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
-        fill_rect(center_x + 4 * scale, top_y + 23 * scale, 4 * scale, 2 * scale, eye);
-    } else {
-        fill_rect(center_x - 8 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
-        fill_rect(center_x + 5 * scale, top_y + 22 * scale, 3 * scale, 3 * scale, eye);
-    }
-    fill_rect(center_x - 3 * scale, top_y + 29 * scale, 7 * scale, 2 * scale, rgb(93, 48, 43));
-    fill_rect(center_x - 4 * scale, top_y + 40 * scale, 8 * scale, 3 * scale, rgb(226, 230, 232));
+static void draw_logo(int32_t center_x, int32_t top_y, int32_t scale) {
+    uint32_t base = accent();
+    uint32_t light = rgb(235, 240, 255);
+    fill_rect(center_x - 48 * scale, top_y + 4 * scale, 96 * scale, 96 * scale, rgb(23, 29, 53));
+    fill_rect(center_x - 40 * scale, top_y + 12 * scale, 80 * scale, 80 * scale, base);
+    fill_rect(center_x - 26 * scale, top_y + 27 * scale, 52 * scale, 10 * scale, light);
+    fill_rect(center_x - 5 * scale, top_y + 27 * scale, 10 * scale, 44 * scale, light);
+    fill_rect(center_x - 26 * scale, top_y + 61 * scale, 52 * scale, 10 * scale, light);
+    fill_circle(center_x + 31 * scale, top_y + 81 * scale, 5 * scale, blink_closed ? light : rgb(105, 214, 169));
 }
 
 static void draw_background(void) {
@@ -539,15 +511,15 @@ static void draw_desktop(void) {
     if (!graphics_enabled) {
         vga_attribute = 0x1F;
         vga_clear();
-        vga_at(2, 1, "TSKIDEOS 0.2.0", 0x1F);
-        vga_at(2, 3, "TINY SKIDE IS HERE", 0x0E);
-        vga_at(2, 6, "  /\\_/\\", 0x0B);
-        vga_at(2, 7, " ( o.o )", 0x0B);
-        vga_at(2, 8, "  > ^ <", 0x0B);
-        vga_at(2, 11, "WELCOME TO YOUR LITTLE DESKTOP.", 0x0F);
+        vga_at(2, 1, "TSKIDEOS 0.3.0", 0x1F);
+        vga_at(2, 3, "TSKIDEOS IS ONLINE", 0x0E);
+        vga_at(2, 6, "  [ T ]", 0x0B);
+        vga_at(2, 7, "  | |", 0x0B);
+        vga_at(2, 8, "  [___]", 0x0B);
+        vga_at(2, 11, "WELCOME TO YOUR TSKIDEOS SYSTEM.", 0x0F);
         vga_at(2, 13, "PRESS ENTER OR T TO OPEN THE TERMINAL.", 0x0F);
         vga_at(2, 14, "PRESS 2 FOR ABOUT.", 0x0F);
-        vga_at(2, 23, "TINY SKIDE - ALWAYS AROUND.", 0x0A);
+        vga_at(2, 23, "TSKIDEOS - INDEPENDENT X86 SYSTEM.", 0x0A);
         return;
     }
     draw_background();
@@ -563,17 +535,17 @@ static void draw_desktop(void) {
     fill_circle(px + 33, py + 17, 4, rgb(250, 197, 92));
     fill_circle(px + 48, py + 17, 4, rgb(101, 213, 158));
     draw_text(px + 67, py + 13, "WELCOME", rgb(211, 218, 242), 1);
-    draw_mascot(px + 145, py + 62, 3);
-    draw_text(px + 276, py + 72, "HEY, I'M TINY SKIDE!", rgb(255, 255, 255), 2);
-    draw_text(px + 276, py + 111, "YOUR LITTLE OS BUDDY.", rgb(181, 194, 222), 1);
+    draw_logo(px + 145, py + 62, 3);
+    draw_text(px + 276, py + 72, "WELCOME TO TSKIDEOS", rgb(255, 255, 255), 2);
+    draw_text(px + 276, py + 111, "AN INDEPENDENT OPERATING SYSTEM.", rgb(181, 194, 222), 1);
     fill_rect(px + 276, py + 143, 240, 2, accent());
-    draw_text(px + 276, py + 168, "A SMALL OS.", rgb(222, 228, 246), 2);
-    draw_text(px + 276, py + 191, "A LITTLE PERSONALITY.", rgb(222, 228, 246), 1);
+    draw_text(px + 276, py + 168, "KERNEL + GRAPHICS.", rgb(222, 228, 246), 2);
+    draw_text(px + 276, py + 191, "KEYBOARD + SHELL.", rgb(222, 228, 246), 1);
     fill_rect(px + 276, py + 225, 230, 34, accent());
-    draw_text(px + 292, py + 238, "PRESS ENTER TO START", rgb(20, 24, 42), 1);
-    draw_text(px + 276, py + 277, "OR PRESS 2 TO MEET ME", rgb(164, 177, 208), 1);
+    draw_text(px + 292, py + 238, "PRESS ENTER TO OPEN SHELL", rgb(20, 24, 42), 1);
+    draw_text(px + 276, py + 277, "PRESS 2 FOR SYSTEM INFO", rgb(164, 177, 208), 1);
     draw_dock();
-    draw_text(18, (int32_t)screen_height - 26, "TSKIDEOS 0.2.0 | BUILT SMALL. MADE YOURS.", rgb(157, 168, 201), 1);
+    draw_text(18, (int32_t)screen_height - 26, "TSKIDEOS 0.3.0 | BUILT SMALL. MADE YOURS.", rgb(157, 168, 201), 1);
 }
 
 static void draw_terminal(void) {
@@ -602,7 +574,7 @@ static void draw_terminal(void) {
     fill_circle(x + 48, y + 19, 4, rgb(101, 213, 158));
     draw_text(x + 67, y + 15, "SKSH TERMINAL", rgb(232, 237, 250), 1);
     draw_text(x + width - 92, y + 15, "ESC: HOME", rgb(168, 180, 211), 1);
-    draw_text(x + 22, y + 57, "TINY SKIDE SHELL", accent(), 2);
+    draw_text(x + 22, y + 57, "TSKIDEOS SHELL", accent(), 2);
     draw_text(x + 22, y + 83, "TYPE HELP FOR COMMANDS.", rgb(155, 170, 200), 1);
     uint32_t visible = 15;
     uint32_t start = shell_line_count > visible ? shell_line_count - visible : 0;
@@ -622,7 +594,7 @@ static void draw_about(void) {
         vga_clear();
         vga_at(2, 2, "ABOUT TSKIDEOS", 0x0E);
         vga_at(2, 5, "TSKIDEOS IS A SMALL X86 OPERATING SYSTEM.", 0x0F);
-        vga_at(2, 7, "TINY SKIDE LIVES ON YOUR DESKTOP.", 0x0F);
+        vga_at(2, 7, "AN INDEPENDENT X86 OPERATING SYSTEM.", 0x0F);
         vga_at(2, 9, "BUILT-IN GRAPHICS, KEYBOARD AND SHELL.", 0x0F);
         vga_at(2, 12, "PRESS ESC TO RETURN.", 0x0B);
         return;
@@ -635,12 +607,12 @@ static void draw_about(void) {
     fill_rect(x, y, 500, 320, rgb(39, 45, 76));
     fill_rect(x, y, 500, 38, rgb(48, 55, 91));
     draw_text(x + 20, y + 15, "ABOUT TSKIDEOS", rgb(238, 241, 255), 1);
-    draw_mascot(x + 100, y + 74, 2);
-    draw_text(x + 190, y + 76, "TSKIDEOS 0.2.0", accent(), 2);
+    draw_logo(x + 100, y + 74, 2);
+    draw_text(x + 190, y + 76, "TSKIDEOS 0.3.0", accent(), 2);
     draw_text(x + 190, y + 111, "A SMALL X86 OPERATING SYSTEM.", rgb(228, 233, 248), 1);
-    draw_text(x + 190, y + 138, "TINY SKIDE LIVES ON YOUR DESKTOP.", rgb(228, 233, 248), 1);
+    draw_text(x + 190, y + 138, "AN INDEPENDENT X86 OPERATING SYSTEM.", rgb(228, 233, 248), 1);
     draw_text(x + 190, y + 165, "BUILT-IN GRAPHICS, KEYBOARD AND SHELL.", rgb(190, 201, 225), 1);
-    draw_text(x + 190, y + 192, "NO NETWORK. NO EXTRA SERVICES.", rgb(190, 201, 225), 1);
+    draw_text(x + 190, y + 192, "CURRENT TARGET: PC AND QEMU.", rgb(190, 201, 225), 1);
     fill_rect(x + 190, y + 232, 260, 2, accent());
     draw_text(x + 190, y + 260, "PRESS ESC TO RETURN HOME.", rgb(177, 189, 218), 1);
 }
@@ -794,7 +766,7 @@ static void poll_keyboard(void) {
 void kernel_main(uint32_t magic, uint32_t info_address) {
     multiboot_info_t *info = (multiboot_info_t *)(uintptr_t)info_address;
     serial_init();
-    serial_print("TSkideOS 0.2.0 booting\r\n");
+    serial_print("TSkideOS 0.3.0 booting\r\n");
     if (magic == MULTIBOOT_MAGIC && info && (info->flags & 1u)) {
         memory_lower = info->mem_lower;
         memory_upper = info->mem_upper;
@@ -802,7 +774,7 @@ void kernel_main(uint32_t magic, uint32_t info_address) {
     init_graphics(magic, info);
     if (graphics_enabled) serial_print("framebuffer online\r\n");
     else serial_print("VGA text fallback online\r\n");
-    serial_print("Tiny Skide desktop ready\r\n");
+    serial_print("TSkideOS desktop ready\r\n");
     shell_welcome();
     blink_closed = 0;
     draw_desktop();
