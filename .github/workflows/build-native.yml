@@ -33,7 +33,10 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y make autoconf automake git python3 binutils libtool-bin pkg-config flex bison gettext texinfo rsync patch wget curl xz-utils unzip gtk-doc-tools
+          sudo apt-get install -y make autoconf automake git python2.7 python3 binutils libtool-bin pkg-config flex bison gettext texinfo rsync patch wget curl xz-utils unzip gtk-doc-tools
+          sudo ln -sf /usr/bin/python2.7 /usr/local/bin/python
+          python --version
+          python3 --version
 
       - name: Install legacy NDK r14b
         run: |
