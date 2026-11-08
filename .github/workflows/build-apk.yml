@@ -14,6 +14,9 @@ jobs:
   build-apk:
     runs-on: ubuntu-22.04
     timeout-minutes: 60
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - name: Checkout Wildfire Lab
         uses: actions/checkout@v5
@@ -40,13 +43,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepare Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install Android build packages
         run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-29" "build-tools;29.0.3"
+          set -eux
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-29" "build-tools;29.0.3"
 
       - name: Install Java 11 for Gradle
         uses: actions/setup-java@v5
