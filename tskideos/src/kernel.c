@@ -65,6 +65,21 @@ static uint8_t caps_lock;
 static uint8_t accent_index;
 static uint32_t memory_lower;
 static uint32_t memory_upper;
+static volatile uint8_t redraw_pending = 1;
+typedef struct __attribute__((packed)) {
+    uint16_t offset_low;
+    uint16_t selector;
+    uint8_t zero;
+    uint8_t flags;
+    uint16_t offset_high;
+} idt_entry_t;
+typedef struct __attribute__((packed)) {
+    uint16_t limit;
+    uint32_t base;
+} idt_pointer_t;
+static idt_entry_t idt[256];
+extern void keyboard_interrupt_stub(void);
+extern void default_interrupt_stub(void);
 static const uint32_t accents[3] = {0xFF7A59, 0x68D8C5, 0xA78BFA};
 
 static const uint8_t font[128][5] = {
@@ -638,11 +653,39 @@ static void handle_key(uint8_t code) {
     else if (ch == '2' || ch == 'a' || ch == 'A') about_open = 1;
 }
 
-static void poll_keyboard(void) {
-    while (inb(0x64) & 1) {
-        uint8_t code = inb(0x60);
-        handle_key(code);
-    }
+static void set_idt_gate(uint8_t vector, void (*handler)(void)) {
+    uint32_t address = (uint32_t)(uintptr_t)handler;
+    idt[vector].offset_low = (uint16_t)(address & 0xFFFF);
+    idt[vector].selector = 0x08;
+    idt[vector].zero = 0;
+    idt[vector].flags = 0x8E;
+    idt[vector].offset_high = (uint16_t)(address >> 16);
+}
+
+void keyboard_irq_handler(void) {
+    handle_key(inb(0x60));
+    redraw_pending = 1;
+    outb(0x20, 0x20);
+}
+
+static void setup_interrupts(void) {
+    for (uint32_t i = 0; i < 256; i++) set_idt_gate((uint8_t)i, default_interrupt_stub);
+    set_idt_gate(0x21, keyboard_interrupt_stub);
+    idt_pointer_t pointer;
+    pointer.limit = (uint16_t)(sizeof(idt) - 1);
+    pointer.base = (uint32_t)(uintptr_t)&idt;
+    __asm__ volatile("lidt %0" : : "m"(pointer));
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+    outb(0x21, 0xFD);
+    outb(0xA1, 0xFF);
+    __asm__ volatile("sti");
 }
 
 void kernel_main(uint32_t magic, uint32_t info_address) {
@@ -658,11 +701,18 @@ void kernel_main(uint32_t magic, uint32_t info_address) {
     else serial_print("VGA text fallback online\r\n");
     serial_print("Tiny Skide desktop ready\r\n");
     draw_desktop();
+    redraw_pending = 0;
+    setup_interrupts();
     for (;;) {
-        poll_keyboard();
-        if (shell_open) draw_terminal();
-        else if (about_open) draw_about();
-        else draw_desktop();
-        __asm__ volatile("pause");
+        __asm__ volatile("cli");
+        if (redraw_pending) {
+            redraw_pending = 0;
+            __asm__ volatile("sti");
+            if (shell_open) draw_terminal();
+            else if (about_open) draw_about();
+            else draw_desktop();
+        } else {
+            __asm__ volatile("sti; hlt");
+        }
     }
 }
