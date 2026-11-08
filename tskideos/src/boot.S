@@ -31,6 +31,14 @@ halt:
     jmp halt
 .size _start, . - _start
 
+.global timer_interrupt_stub
+.type timer_interrupt_stub, @function
+timer_interrupt_stub:
+    pusha
+    call timer_irq_handler
+    popa
+    iret
+
 .global keyboard_interrupt_stub
 .type keyboard_interrupt_stub, @function
 keyboard_interrupt_stub:
