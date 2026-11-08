@@ -55,7 +55,6 @@ public class TskideActivity extends Activity {
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         homeView = new TskideHomeView(this);
         setContentView(homeView);
