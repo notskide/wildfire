@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class TskideActivity extends Activity {
+    public static final String VERSION = "0.2.0";
     private TskideHomeView homeView;
     private int batteryLevel = 100;
     private boolean charging;
