@@ -46,6 +46,7 @@ static volatile uint8_t *framebuffer;
 static uint32_t screen_width;
 static uint32_t screen_height;
 static uint32_t screen_pitch;
+static uint8_t framebuffer_bytes;
 static uint8_t red_position = 16;
 static uint8_t green_position = 8;
 static uint8_t blue_position = 0;
@@ -176,8 +177,11 @@ static uint32_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 
 static void put_pixel(int32_t x, int32_t y, uint32_t color) {
     if (!graphics_enabled || x < 0 || y < 0 || (uint32_t)x >= screen_width || (uint32_t)y >= screen_height) return;
-    volatile uint32_t *pixel = (volatile uint32_t *)(framebuffer + (uint32_t)y * screen_pitch + (uint32_t)x * 4);
-    *pixel = color;
+    volatile uint8_t *pixel = framebuffer + (uint32_t)y * screen_pitch + (uint32_t)x * framebuffer_bytes;
+    pixel[0] = (uint8_t)color;
+    pixel[1] = (uint8_t)(color >> 8);
+    pixel[2] = (uint8_t)(color >> 16);
+    if (framebuffer_bytes == 4) pixel[3] = (uint8_t)(color >> 24);
 }
 
 static void fill_rect(int32_t x, int32_t y, int32_t width, int32_t height, uint32_t color) {
@@ -187,8 +191,14 @@ static void fill_rect(int32_t x, int32_t y, int32_t width, int32_t height, uint3
     int32_t x1 = x + width > (int32_t)screen_width ? (int32_t)screen_width : x + width;
     int32_t y1 = y + height > (int32_t)screen_height ? (int32_t)screen_height : y + height;
     for (int32_t py = y0; py < y1; py++) {
-        volatile uint32_t *row = (volatile uint32_t *)(framebuffer + (uint32_t)py * screen_pitch);
-        for (int32_t px = x0; px < x1; px++) row[px] = color;
+        volatile uint8_t *row = framebuffer + (uint32_t)py * screen_pitch;
+        for (int32_t px = x0; px < x1; px++) {
+            volatile uint8_t *pixel = row + (uint32_t)px * framebuffer_bytes;
+            pixel[0] = (uint8_t)color;
+            pixel[1] = (uint8_t)(color >> 8);
+            pixel[2] = (uint8_t)(color >> 16);
+            if (framebuffer_bytes == 4) pixel[3] = (uint8_t)(color >> 24);
+        }
     }
 }
 
@@ -256,7 +266,7 @@ static void init_graphics(uint32_t magic, multiboot_info_t *info) {
     serial_print(" type=");
     serial_dec(info->framebuffer_type);
     serial_print("\r\n");
-    if (info->framebuffer_type != 1 || info->framebuffer_bpp != 32) {
+    if (info->framebuffer_type != 1 || (info->framebuffer_bpp != 24 && info->framebuffer_bpp != 32)) {
         serial_print("Unsupported framebuffer pixel format\r\n");
         return;
     }
@@ -265,6 +275,7 @@ static void init_graphics(uint32_t magic, multiboot_info_t *info) {
         return;
     }
     framebuffer = (volatile uint8_t *)(uintptr_t)info->framebuffer_addr;
+    framebuffer_bytes = (uint8_t)(info->framebuffer_bpp / 8);
     screen_width = info->framebuffer_width;
     screen_height = info->framebuffer_height;
     screen_pitch = info->framebuffer_pitch;
