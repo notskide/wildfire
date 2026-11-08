@@ -48,9 +48,8 @@ public class TskideHomeView extends View {
     private int appOffset;
     private int accentIndex;
     private int brightness;
-    private float scale = 1.0f;
-    private float offsetX;
-    private float offsetY;
+    private float scaleX = 1.0f;
+    private float scaleY = 1.0f;
     private float downX;
     private float downY;
     private boolean moved;
@@ -73,14 +72,10 @@ public class TskideHomeView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float sx = getWidth() / 240.0f;
-        float sy = getHeight() / 320.0f;
-        scale = Math.min(sx, sy);
-        offsetX = (getWidth() - 240.0f * scale) / 2.0f;
-        offsetY = (getHeight() - 320.0f * scale) / 2.0f;
+        scaleX = getWidth() / 240.0f;
+        scaleY = getHeight() / 320.0f;
         canvas.save();
-        canvas.translate(offsetX, offsetY);
-        canvas.scale(scale, scale);
+        canvas.scale(scaleX, scaleY);
         drawWallpaper(canvas);
         if (screen == HOME) drawHome(canvas);
         else if (screen == DRAWER) drawDrawer(canvas);
@@ -109,10 +104,7 @@ public class TskideHomeView extends View {
     private void drawStatus(Canvas canvas) {
         fill(canvas, 0, 0, 240, 25, Color.rgb(10, 13, 21));
         text(canvas, "TSKIDEOS", 11, 16, 9, TEXT, true);
-        text(canvas, new SimpleDateFormat("h:mm", Locale.getDefault()).format(new Date()), 156, 16, 10, TEXT, true);
-        drawWifi(canvas, 190, 12, activity.isWifiEnabled());
-        drawBluetooth(canvas, 204, 12, activity.isBluetoothEnabled());
-        drawBattery(canvas, 220, 8, activity.getBatteryLevel(), activity.isCharging());
+        text(canvas, "PHONE EDITION", 155, 16, 7, MUTED, true);
     }
 
     private void drawHome(Canvas canvas) {
@@ -411,8 +403,8 @@ public class TskideHomeView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        float x = (event.getX() - offsetX) / scale;
-        float y = (event.getY() - offsetY) / scale;
+        float x = event.getX() / scaleX;
+        float y = event.getY() / scaleY;
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             downX = x;
             downY = y;
