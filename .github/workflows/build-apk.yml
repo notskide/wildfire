@@ -180,6 +180,7 @@ jobs:
           value = value.replace("Config.enableKVM = true;", "Config.enableKVM = false;", 1)
           if "Config.enableKVM = false;" not in value:
               raise SystemExit("KVM must be disabled for the Android host")
+          value = value.replace("LimboApplication.arch = Config.Arch.x86_64;", "LimboApplication.arch = Config.Arch.x86_64;\\n        Config.machineFolder = \"machines/\";\\n        Config.enableEmulatedFloppy = true;\\n        Config.enableEmulatedSDCard = false;", 1)
           if "Config.enableSDLSound = false;" not in value:
               value = value.replace("Config.enableKVM = false;", "Config.enableKVM = false;\n        Config.enableSDLSound = false;", 1)
           if "Config.enableSoftwareUpdates = false;" not in value:
