@@ -181,14 +181,14 @@ jobs:
           if "Config.enableKVM = false;" not in value:
               raise SystemExit("KVM must be disabled for the Android host")
           if "Config.enableSDLSound = false;" not in value:
-              value = value.replace("Config.enableKVM = false;", "Config.enableKVM = false;\\n        Config.enableSDLSound = false;", 1)
+              value = value.replace("Config.enableKVM = false;", "Config.enableKVM = false;\n        Config.enableSDLSound = false;", 1)
           if "Config.enableSoftwareUpdates = false;" not in value:
-              value = value.replace("Config.enableSDLSound = false;", "Config.enableSDLSound = false;\\n        Config.enableSoftwareUpdates = false;", 1)
+              value = value.replace("Config.enableSDLSound = false;", "Config.enableSDLSound = false;\n        Config.enableSoftwareUpdates = false;", 1)
           activity.write_text(value)
 
           gradle = module / "build.gradle"
           value = gradle.read_text()
-          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"\\n        versionCode 40000\\n        versionName "0.4.0"', 1)
+          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"\n        versionCode 40000\n        versionName "0.4.0"', 1)
           value = value.replace('abiFilters "armeabi-v7a","arm64-v8a", "x86", "x86_64"', 'abiFilters "arm64-v8a"')
           if 'versionName "0.4.0"' not in value:
               raise SystemExit("Unified app version was not configured")
