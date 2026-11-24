@@ -22,7 +22,7 @@ public class LimboEmuActivity extends LimboActivity {
         } else {
             Config.enableMTTCG = false;
         }
-        Config.machineFolder = Config.machineFolder + "other/arm_machines/";
+        Config.machineFolder = "machines/other/arm_machines/";
         super.onCreate(bundle);
         Logger.setupLogFile("/limbo/limbo-arm-log.txt");
     }
