@@ -1,31 +1,39 @@
 name: Build Wildfire Lab native engine
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-native.yml"
+      - ".github/workflows/build-apk.yml"
+      - "scripts/**"
+      - "patches/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-arm64-engine:
+  build-arm64-multiarch-engine:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     steps:
-      - name: Checkout Wildfire Lab build repository
+      - name: Checkout Wildfire Lab
         uses: actions/checkout@v5
 
-      - name: Checkout Limbo native source
+      - name: Checkout pinned Limbo source
         uses: actions/checkout@v5
         with:
           repository: limboemu/limbo
-          ref: master
+          ref: 887c6a68cd6b414377d7f8071bc12bbc16e59809
           path: LimboSource
 
       - name: Install Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Install build dependencies
         run: |
@@ -63,7 +71,7 @@ jobs:
           tar -xzf /tmp/sdl2.tar.gz -C /tmp
           mv /tmp/SDL2-2.0.8 SDL2
 
-      - name: Apply Limbo patches
+      - name: Apply upstream native patches
         working-directory: LimboSource/limbo-android-lib/src/main/jni
         run: |
           set -eux
@@ -71,13 +79,13 @@ jobs:
           patch -d glib -p1 < patches/glib-2.56.1.patch
           patch -d SDL2 -p1 < patches/sdl2-2.0.8.patch
 
-      - name: Compile ARM64 Android engine for x86_64 guests
+      - name: Compile ARM64 Android host engines for PC and phone guests
         working-directory: LimboSource/limbo-android-lib/src/main/jni
         env:
           NDK_ENV: linux-x86_64
           USE_GCC: "true"
           BUILD_HOST: arm64-v8a
-          BUILD_GUEST: x86_64-softmmu
+          BUILD_GUEST: x86_64-softmmu,aarch64-softmmu
           USE_QEMU_VERSION: "2.9.1"
           USE_AAUDIO: "false"
           USE_KVM: "false"
@@ -85,22 +93,31 @@ jobs:
           set -eux
           make -j2 limbo NDK_ROOT="$NDK_ROOT" NDK_ENV="$NDK_ENV" USE_GCC="$USE_GCC" BUILD_HOST="$BUILD_HOST" BUILD_GUEST="$BUILD_GUEST" USE_QEMU_VERSION="$USE_QEMU_VERSION" USE_AAUDIO="$USE_AAUDIO" USE_KVM="$USE_KVM"
 
-      - name: Verify ARM64 shared libraries and package engine
+      - name: Verify all guest engines and package native files
         working-directory: LimboSource
         run: |
           set -eux
-          find limbo-android-lib/src/main/jniLibs/arm64-v8a limbo-android-x86/src/main/jniLibs/arm64-v8a -type f -name '*.so' -print
-          test -f limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so
-          readelf -h limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so | grep -E 'Class:|Machine:'
-          mkdir -p "$GITHUB_WORKSPACE/native-engine"
-          cp -a limbo-android-lib/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/common"
-          cp -a limbo-android-x86/src/main/jniLibs/arm64-v8a "$GITHUB_WORKSPACE/native-engine/qemu"
-          cp -a limbo-android-x86/src/main/assets "$GITHUB_WORKSPACE/native-engine/assets"
+          X86_LIBS=limbo-android-x86/src/main/jniLibs/arm64-v8a
+          ARM_LIBS=limbo-android-arm/src/main/jniLibs/arm64-v8a
+          test -f "$X86_LIBS/libqemu-system-x86_64.so"
+          test -f "$ARM_LIBS/libqemu-system-aarch64.so"
+          for library in "$X86_LIBS/libqemu-system-x86_64.so" "$ARM_LIBS/libqemu-system-aarch64.so"; do
+            readelf -h "$library" | grep 'Machine:.*AArch64'
+          done
+          test -f limbo-android-lib/src/main/jniLibs/arm64-v8a/libcompat-limbo.so
+          test -f limbo-android-lib/src/main/jniLibs/arm64-v8a/libSDL2.so
+          mkdir -p "$GITHUB_WORKSPACE/native-engine/common" "$GITHUB_WORKSPACE/native-engine/x86" "$GITHUB_WORKSPACE/native-engine/arm" "$GITHUB_WORKSPACE/native-engine/assets"
+          cp -a limbo-android-lib/src/main/jniLibs/arm64-v8a/. "$GITHUB_WORKSPACE/native-engine/common/"
+          cp -a "$X86_LIBS/." "$GITHUB_WORKSPACE/native-engine/x86/"
+          cp -a "$ARM_LIBS/." "$GITHUB_WORKSPACE/native-engine/arm/"
+          cp -a limbo-android-x86/src/main/assets/. "$GITHUB_WORKSPACE/native-engine/assets/"
+          test -f "$GITHUB_WORKSPACE/native-engine/assets/QEMU_VERSION"
+          test -f "$GITHUB_WORKSPACE/native-engine/assets/roms/bios.bin"
 
-      - name: Upload native engine artifact
+      - name: Upload multi-architecture native engine
         uses: actions/upload-artifact@v4
         with:
-          name: wildfirelab-native-arm64-x86_64
+          name: wildfirelab-native-arm64-multiarch
           path: native-engine/
           if-no-files-found: error
           retention-days: 90

@@ -1,6 +1,9 @@
-# TSkideOS
+# TSkideOS and Wildfire Lab
 
-TSkideOS is an independent operating system project. Its primary build is a bootable x86 ISO for PC emulators such as QEMU and Limbo.
+This repository contains two related experiments:
+
+- **TSkideOS** is an independent operating-system project. Its current kernel is a 32-bit x86 OS built as a bootable GRUB ISO for PC emulators.
+- **Wildfire Lab** is an Android-hosted virtual-machine app based on Limbo/QEMU. It has separate PC and ARM mobile guest editions.
 
 ## TSkideOS 0.3.0
 
@@ -19,12 +22,54 @@ Build locally on a Linux x86 toolchain:
 make -C tskideos clean iso
 ```
 
-The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and tests the ISO on every relevant kernel change.
+The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and tests the ISO on relevant kernel changes.
 
-## Run in Limbo or QEMU
+## Wildfire Lab editions
+
+GitHub Actions packages two Android APKs:
+
+- **Wildfire Lab PC** runs x86 and x86_64 guest systems using the x86 QEMU backend.
+- **Wildfire Lab Mobile** runs AArch64 (ARM64) guest systems using the ARM QEMU backend. It is intended for compatible ARM64 Linux and Android builds designed for generic virtual hardware.
+
+Both APKs are built for 64-bit ARM Android devices. The guest CPU architecture is independent from the Android device's own CPU architecture.
+
+### Supported image types
+
+Wildfire Lab uses QEMU's disk and optical-drive support:
+
+- ISO images for CD/DVD boot media
+- Raw disk images such as IMG and RAW
+- QCOW and QCOW2
+- VDI and VMDK
+- VPC/VHD disk images
+- Floppy images such as IMA
+
+The file picker is intentionally not restricted to a short extension list. Whether an image boots still depends on its format, guest architecture, virtual machine configuration and the operating system inside it.
+
+### Importing phone ROM ZIPs
+
+Use **Import ROM ZIP** in the VM app to extract a ROM archive into a folder you choose. The importer blocks unsafe archive paths and limits the number of entries and total extracted size.
+
+A ROM ZIP is a container, not a bootable virtual disk. It may contain files such as `boot.img`, `system.img`, `vendor.img`, `super.img`, `recovery.img` or `payload.bin`. Attach only components that match the VM's virtual hardware and boot method. Android sparse images or payload packages may need conversion before QEMU can use them.
+
+### Phone OS compatibility boundary
+
+The Mobile edition adds an AArch64 (ARM64) virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
+
+The existing TSkideOS ISO remains x86-only. A native ARM phone build of TSkideOS would require a separate ARM kernel, boot image and suitable device drivers.
+
+## Build and download
+
+The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. When it succeeds, the APK workflow packages the PC and Mobile editions.
+
+Download both APKs from the `wildfirelab-pc-and-mobile-apks` artifact on the corresponding successful GitHub Actions run.
+
+The **Build TSkideOS ISO** workflow separately builds and tests `tskideos/build/tskideos.iso`.
+
+## Run TSkideOS in an emulator
 
 Create an x86 PC virtual machine, attach `tskideos.iso` as a CD-ROM, and boot from the CD-ROM. A small 128 MB RAM allocation is sufficient for the current kernel.
 
 ## Hardware boundary
 
-The current ISO targets x86 and is intended for PC emulators. It does not boot directly on the HTC Wildfire A3333, which uses an ARMv6 processor. A Wildfire edition requires a separate ARMv6 kernel, boot image, and device-specific drivers. The Android launcher prototype in `app/` is separate from the TSkideOS operating system and is not the ISO.
+The current TSkideOS ISO targets x86 and is intended for PC emulators. It does not boot directly on ARM phone hardware such as the HTC Wildfire A3333. A Wildfire-specific native edition needs a separate ARMv6 kernel, boot image and device drivers.
