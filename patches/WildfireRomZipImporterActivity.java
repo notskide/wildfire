@@ -61,18 +61,18 @@ public class WildfireRomZipImporterActivity extends Activity {
 
         zipButton = new Button(this);
         zipButton.setText("Choose ROM ZIP");
-        zipButton.setOnClickListener(v -> chooseZip());
+        zipButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                chooseZip();\n            }\n        });
         content.addView(zipButton);
 
         destinationButton = new Button(this);
         destinationButton.setText("Choose destination folder");
-        destinationButton.setOnClickListener(v -> chooseDestination());
+        destinationButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                chooseDestination();\n            }\n        });
         content.addView(destinationButton);
 
         extractButton = new Button(this);
         extractButton.setText("Extract ZIP");
         extractButton.setEnabled(false);
-        extractButton.setOnClickListener(v -> beginExtraction());
+        extractButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                beginExtraction();\n            }\n        });
         content.addView(extractButton);
 
         status = new TextView(this);
@@ -140,23 +140,32 @@ public class WildfireRomZipImporterActivity extends Activity {
         extractButton.setEnabled(false);
         status.setText("Extracting OS/ROM archive…");
 
-        new Thread(() -> {
-            try {
-                ExtractionResult result = extractArchive(source, destination);
-                runOnUiThread(() -> {
-                    status.setText(result.message);
-                    extractButton.setText("Extraction complete");
-                });
-            } catch (Exception error) {
-                String message = error.getMessage();
-                if (message == null || message.trim().isEmpty()) message = error.getClass().getSimpleName();
-                final String errorMessage = "Import failed: " + message;
-                runOnUiThread(() -> {
-                    status.setText(errorMessage);
-                    zipButton.setEnabled(true);
-                    destinationButton.setEnabled(true);
-                    extractButton.setEnabled(zipUri != null && destinationTreeUri != null);
-                });
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    final ExtractionResult result = extractArchive(source, destination);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            status.setText(result.message);
+                            extractButton.setText("Extraction complete");
+                        }
+                    });
+                } catch (Exception error) {
+                    String message = error.getMessage();
+                    if (message == null || message.trim().isEmpty()) message = error.getClass().getSimpleName();
+                    final String errorMessage = "Import failed: " + message;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            status.setText(errorMessage);
+                            zipButton.setEnabled(true);
+                            destinationButton.setEnabled(true);
+                            extractButton.setEnabled(zipUri != null && destinationTreeUri != null);
+                        }
+                    });
+                }
             }
         }, "WildfireRomZipExtractor").start();
     }
