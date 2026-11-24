@@ -11,6 +11,7 @@ patch_root = Path(__file__).resolve().parents[1] / "patches"
 activity = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/LimboActivity.java"
 manifest = root / "limbo-android-lib/src/main/AndroidManifest.xml"
 file_utils = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/files/FileUtils.java"
+arm_activity = root / "limbo-android-arm/src/main/java/com/limbo/emu/main/arm/LimboEmuActivity.java"
 importer_source = patch_root / "WildfireRomZipImporterActivity.java"
 importer_target = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/files/WildfireRomZipImporterActivity.java"
 
@@ -49,6 +50,12 @@ replace_once(
     file_utils,
     '                || ext.equals("vhd") || ext.equals("fs"))',
     '                || ext.equals("vhd") || ext.equals("vhdx") || ext.equals("raw") || ext.equals("fs"))'
+)
+
+replace_once(
+    arm_activity,
+    '        try {\n            System.loadLibrary("qemu-system-arm");\n        } catch (Error ex) {\n            System.loadLibrary("qemu-system-aarch64");\n        }\n',
+    '        System.loadLibrary("qemu-system-aarch64");\n'
 )
 
 if not importer_source.is_file():
