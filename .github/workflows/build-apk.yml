@@ -159,8 +159,8 @@ jobs:
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <activity
+          </activity>
+          <activity
             android:name="com.limbo.emu.main.arm.LimboEmuActivity"
             android:exported="false"
             android:label="Wildfire Lab ARM64"
