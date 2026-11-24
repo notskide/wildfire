@@ -2,12 +2,10 @@ package com.max2idea.android.limbo.files;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.webkit.MimeTypeMap;
-import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -278,7 +276,12 @@ public class WildfireRomZipImporterActivity extends Activity {
             parts.add(safe);
         }
         if (parts.isEmpty()) throw new IOException("The ZIP contains an empty path.");
-        String result = String.join("/", parts);
+        StringBuilder joined = new StringBuilder();
+        for (String part : parts) {
+            if (joined.length() > 0) joined.append('/');
+            joined.append(part);
+        }
+        String result = joined.toString();
         if (result.length() > 2048) throw new IOException("The ZIP contains an excessively long path.");
         return result;
     }
