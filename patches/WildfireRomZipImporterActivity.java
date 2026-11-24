@@ -49,7 +49,7 @@ public class WildfireRomZipImporterActivity extends Activity {
         content.setPadding(24, 24, 24, 24);
 
         TextView title = new TextView(this);
-        title.setText("Import phone ROM ZIP");
+        title.setText("Import OS or phone ROM ZIP");
         title.setTextSize(23);
         content.addView(title);
 
@@ -138,7 +138,7 @@ public class WildfireRomZipImporterActivity extends Activity {
         zipButton.setEnabled(false);
         destinationButton.setEnabled(false);
         extractButton.setEnabled(false);
-        status.setText("Extracting ROM archive…");
+        status.setText("Extracting OS/ROM archive…");
 
         new Thread(() -> {
             try {
@@ -211,6 +211,13 @@ public class WildfireRomZipImporterActivity extends Activity {
                         String lower = fileName.toLowerCase(Locale.ROOT);
                         if (lower.equals("boot.img") || lower.equals("init_boot.img") || lower.equals("recovery.img") || lower.equals("system.img") || lower.equals("vendor.img") || lower.equals("super.img") || lower.equals("payload.bin")) {
                             if (notableFiles.size() < 8) notableFiles.add(fileName);
+                        }
+                    } else {
+                        int read;
+                        while ((read = zip.read(buffer)) != -1) {
+                            if (read == 0) continue;
+                            if (totalBytes > MAX_EXTRACTED_BYTES - read) throw new IOException("The ZIP expands beyond the 8 GiB safety limit.");
+                            totalBytes += read;
                         }
                     }
                     zip.closeEntry();
