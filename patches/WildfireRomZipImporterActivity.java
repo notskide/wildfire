@@ -241,7 +241,7 @@ public class WildfireRomZipImporterActivity extends Activity {
                 message.append(notableFiles.get(i));
             }
         }
-        message.append("\n\nNext: create an ARM/ARM64 VM and attach compatible images in its disk, kernel or initrd fields. Device-specific firmware may still need hardware that generic QEMU does not emulate.");
+        message.append("\n\nNext: create an AArch64 (ARM64) VM and attach compatible images in its disk, kernel or initrd fields. Device-specific firmware may still need hardware that generic QEMU does not emulate.");
         return new ExtractionResult(message.toString());
     }
 
