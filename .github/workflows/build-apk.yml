@@ -1,4 +1,4 @@
-name: Package Wildfire Lab PC and Mobile APKs
+name: Package Unified Wildfire Lab APK
 
 on:
   push:
