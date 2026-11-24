@@ -229,7 +229,7 @@ jobs:
           "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-PC-0.3.0.apk" | grep -E "package: name='com.limbo.emu.main'|application-label:'Wildfire Lab PC'"
           "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk" | grep -E "package: name='com.limbo.emu.main.arm'|application-label:'Wildfire Lab Mobile'"
           unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-PC-0.3.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-x86_64.so|assets/QEMU_VERSION|assets/roms/bios.bin"
-          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-aarch64.so|lib/arm64-v8a/libqemu-system-arm.so|assets/QEMU_VERSION"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-aarch64.so|assets/QEMU_VERSION"
 
       - name: Upload Wildfire Lab APKs
         uses: actions/upload-artifact@v4
