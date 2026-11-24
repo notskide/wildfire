@@ -29,7 +29,7 @@ The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and t
 GitHub Actions packages two Android APKs:
 
 - **Wildfire Lab PC** runs x86 and x86_64 guest systems using the x86 QEMU backend.
-- **Wildfire Lab Mobile** runs ARM and AArch64 guest systems using the ARM QEMU backend. It is intended for compatible ARM Linux and Android builds designed for generic virtual hardware.
+- **Wildfire Lab Mobile** runs AArch64 (ARM64) guest systems using the ARM QEMU backend. It is intended for compatible ARM64 Linux and Android builds designed for generic virtual hardware.
 
 Both APKs are built for 64-bit ARM Android devices. The guest CPU architecture is independent from the Android device's own CPU architecture.
 
@@ -54,13 +54,13 @@ A ROM ZIP is a container, not a bootable virtual disk. It may contain files such
 
 ### Phone OS compatibility boundary
 
-The ARM edition adds an ARM/AArch64 virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
+The Mobile edition adds an AArch64 (ARM64) virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
 
 The existing TSkideOS ISO remains x86-only. A native ARM phone build of TSkideOS would require a separate ARM kernel, boot image and suitable device drivers.
 
 ## Build and download
 
-The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64, ARM and AArch64 guest engines. When it succeeds, the APK workflow packages the PC and Mobile editions.
+The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. When it succeeds, the APK workflow packages the PC and Mobile editions.
 
 Download both APKs from the `wildfirelab-pc-and-mobile-apks` artifact on the corresponding successful GitHub Actions run.
 
