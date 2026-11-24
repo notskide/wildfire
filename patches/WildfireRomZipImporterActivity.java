@@ -61,18 +61,33 @@ public class WildfireRomZipImporterActivity extends Activity {
 
         zipButton = new Button(this);
         zipButton.setText("Choose ROM ZIP");
-        zipButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                chooseZip();\n            }\n        });
+        zipButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                chooseZip();
+            }
+        });
         content.addView(zipButton);
 
         destinationButton = new Button(this);
         destinationButton.setText("Choose destination folder");
-        destinationButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                chooseDestination();\n            }\n        });
+        destinationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                chooseDestination();
+            }
+        });
         content.addView(destinationButton);
 
         extractButton = new Button(this);
         extractButton.setText("Extract ZIP");
         extractButton.setEnabled(false);
-        extractButton.setOnClickListener(new View.OnClickListener() {\n            @Override\n            public void onClick(View view) {\n                beginExtraction();\n            }\n        });
+        extractButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                beginExtraction();
+            }
+        });
         content.addView(extractButton);
 
         status = new TextView(this);
