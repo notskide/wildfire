@@ -43,7 +43,7 @@ replace_once(
 replace_once(
     manifest,
     '        <activity\n            android:name="com.max2idea.android.limbo.main.LimboFileManager"',
-    '        <activity\n            android:name="com.max2idea.android.limbo.files.WildfireRomZipImporterActivity"\n                        android:label="Import ROM ZIP" />\n        <activity\n            android:name="com.max2idea.android.limbo.main.LimboFileManager"'
+    '        <activity\n            android:name="com.max2idea.android.limbo.files.WildfireRomZipImporterActivity"\n            android:label="Import ROM ZIP" />\n        <activity\n            android:name="com.max2idea.android.limbo.main.LimboFileManager"'
 )
 
 replace_once(
