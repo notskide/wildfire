@@ -1,7 +1,11 @@
-name: Package Wildfire Lab 0.2.0 APK
+name: Package Wildfire Lab PC and Mobile APKs
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Build Wildfire Lab native engine
+    types:
+      - completed
     branches:
       - main
   workflow_dispatch:
@@ -11,9 +15,10 @@ permissions:
   actions: read
 
 jobs:
-  build-apk:
+  build-apks:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -21,37 +26,48 @@ jobs:
       - name: Checkout Wildfire Lab
         uses: actions/checkout@v5
 
-      - name: Checkout Limbo Android integration
+      - name: Checkout pinned Limbo source
         uses: actions/checkout@v5
         with:
           repository: limboemu/limbo
-          ref: master
+          ref: 887c6a68cd6b414377d7f8071bc12bbc16e59809
           path: LimboSource
 
-      - name: Find the latest successful native engine build
+      - name: Resolve native engine workflow run
         id: native
         uses: actions/github-script@v7
         with:
           script: |
-            const { data } = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: "build-native.yml",
-              branch: "main",
-              status: "completed",
-              per_page: 20
-            });
-            const run = data.workflow_runs.find(item => item.conclusion === "success");
-            if (!run) {
-              core.setFailed("No successful native engine build is available.");
-              return;
+            let runId;
+            if (context.eventName === "workflow_run") {
+              const run = context.payload.workflow_run;
+              if (!run || run.conclusion !== "success") {
+                core.setFailed("The native engine workflow did not complete successfully.");
+                return;
+              }
+              runId = run.id;
+            } else {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: "build-native.yml",
+                branch: "main",
+                status: "completed",
+                per_page: 20
+              });
+              const run = data.workflow_runs.find(item => item.conclusion === "success");
+              if (!run) {
+                core.setFailed("No successful multi-architecture native engine build is available.");
+                return;
+              }
+              runId = run.id;
             }
-            core.setOutput("run_id", String(run.id));
+            core.setOutput("run_id", String(runId));
 
-      - name: Download the verified ARM64 QEMU engine
+      - name: Download multi-architecture native engine
         uses: actions/download-artifact@v4
         with:
-          name: wildfirelab-native-arm64-x86_64
+          name: wildfirelab-native-arm64-multiarch
           path: native-engine
           repository: notskide/wildfire
           run-id: ${{ steps.native.outputs.run_id }}
@@ -61,9 +77,9 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Install Android build packages
+      - name: Install Android SDK packages
         run: |
           set -eux
           set +o pipefail
@@ -75,71 +91,39 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: "11"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 6.7.1
 
-      - name: Install the native engine into the Android modules
+      - name: Install x86 and ARM guest engines
         run: |
           set -eux
           mkdir -p LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a
           mkdir -p LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a
+          mkdir -p LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a
           cp -a native-engine/common/. LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/
-          cp -a native-engine/qemu/. LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/
+          cp -a native-engine/x86/. LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/
+          cp -a native-engine/arm/. LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a/
           cp -a native-engine/assets/. LimboSource/limbo-android-x86/src/main/assets/
-          test -f LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/libcompat-limbo.so
-          test -f LimboSource/limbo-android-lib/src/main/jniLibs/arm64-v8a/libSDL2.so
+          cp -a native-engine/assets/. LimboSource/limbo-android-arm/src/main/assets/
           test -f LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so
-          readelf -h LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so | grep 'Machine:.*AArch64'
+          test -f LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a/libqemu-system-aarch64.so
+          test -f LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a/libqemu-system-arm.so
 
-      - name: Brand and configure Wildfire Lab
+      - name: Apply Wildfire ROM ZIP importer
+        run: |
+          set -eux
+          python3 scripts/apply-limbo-patches.py "$GITHUB_WORKSPACE/LimboSource"
+
+      - name: Brand and configure both editions
         working-directory: LimboSource
         run: |
           set -eux
           python3 - <<'PY'
           from pathlib import Path
-
-          strings = Path("limbo-android-x86/src/main/res/values/strings.xml")
-          value = strings.read_text()
-          value = value.replace('<string name="app_name">Limbo x86 PC Emulator</string>', '<string name="app_name">Wildfire Lab</string>')
-          value = value.replace('<string name="app_short_name">Limbo x86</string>', '<string name="app_short_name">Wildfire Lab</string>')
-          if 'name="app_name">Wildfire Lab<' not in value:
-              raise SystemExit("App name was not updated")
-          strings.write_text(value)
-
-          manifest = Path("limbo-android-x86/src/main/AndroidManifest.xml")
-          value = manifest.read_text()
-          value = value.replace('android:label="Limbo x86 PC Emulator"', 'android:label="Wildfire Lab"')
-          value = value.replace('android:label="Limbo x86"', 'android:label="Wildfire Lab"')
-          if 'android:label="Limbo x86' in value:
-              raise SystemExit("Manifest still contains Limbo branding")
-          manifest.write_text(value)
-
-          activity = Path("limbo-android-x86/src/main/java/com/limbo/emu/main/LimboEmuActivity.java")
-          value = activity.read_text()
-          value = value.replace('Config.enableKVM = true;', 'Config.enableKVM = false;')
-          value = value.replace('Config.enableKVM = false;', 'Config.enableKVM = false;' + chr(10) + '        Config.enableSDLSound = false;' + chr(10) + '        Config.enableSoftwareUpdates = false;')
-          if 'Config.enableKVM = true;' in value:
-              raise SystemExit("KVM must remain disabled for this build")
-          activity.write_text(value)
-
-          base = Path("limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/LimboActivity.java")
-          value = base.read_text()
-          needle = '            if (Build.VERSION.SDK_INT >= 26)' + chr(10) + '                System.loadLibrary("compat-SDL2-addons");'
-          if value.count(needle) != 1:
-              raise SystemExit("Expected optional SDL audio addon load was not found exactly once")
-          value = value.replace(needle, '')
-          base.write_text(value)
-
-          gradle = Path("limbo-android-x86/build.gradle")
-          value = gradle.read_text()
-          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"' + chr(10) + '        versionCode 20000' + chr(10) + '        versionName "0.2.0"')
-          if 'versionName "0.2.0"' not in value:
-              raise SystemExit("App version was not updated")
-          gradle.write_text(value)
 
           icon_xml = """<?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -158,26 +142,99 @@ jobs:
                   android:pathData="M55,57C50,63 46,69 47,76C48,83 56,87 62,82C68,77 64,68 60,63C59,69 56,73 53,75C54,68 54,62 55,57Z" />
           </vector>
           """
-          for folder in ("drawable", "drawable-ldpi", "drawable-mdpi", "drawable-hdpi"):
-              icon = Path("limbo-android-x86/src/main/res") / folder / "limbo.xml"
-              icon.parent.mkdir(parents=True, exist_ok=True)
-              icon.write_text(icon_xml)
+
+          def replace_once(path, old, new):
+              value = path.read_text()
+              if value.count(old) != 1:
+                  raise SystemExit(f"Expected one branding anchor in {path}: {old}")
+              path.write_text(value.replace(old, new, 1))
+
+          editions = [
+              {
+                  "module": "limbo-android-x86",
+                  "name": "Wildfire Lab PC",
+                  "short": "Wildfire PC",
+                  "old_name": "Limbo x86 PC Emulator",
+                  "old_short": "Limbo x86",
+                  "version_code": "20000",
+                  "activity": "src/main/java/com/limbo/emu/main/LimboEmuActivity.java"
+              },
+              {
+                  "module": "limbo-android-arm",
+                  "name": "Wildfire Lab Mobile",
+                  "short": "Wildfire Mobile",
+                  "old_name": "Limbo ARM Emulator",
+                  "old_short": "Limbo ARM",
+                  "version_code": "30000",
+                  "activity": "src/main/java/com/limbo/emu/main/arm/LimboEmuActivity.java"
+              }
+          ]
+
+          for edition in editions:
+              module = Path(edition["module"])
+              strings = module / "src/main/res/values/strings.xml"
+              replace_once(strings, f'<string name="app_name">{edition["old_name"]}</string>', f'<string name="app_name">{edition["name"]}</string>')
+              replace_once(strings, f'<string name="app_short_name">{edition["old_short"]}</string>', f'<string name="app_short_name">{edition["short"]}</string>')
+
+              manifest = module / "src/main/AndroidManifest.xml"
+              value = manifest.read_text()
+              value = value.replace(f'android:label="{edition["old_name"]}"', f'android:label="{edition["name"]}"')
+              value = value.replace(f'android:label="{edition["old_short"]}"', f'android:label="{edition["short"]}"')
+              if edition["name"] not in value:
+                  raise SystemExit(f"Could not brand {edition['module']}")
+              manifest.write_text(value)
+
+              activity = module / edition["activity"]
+              value = activity.read_text()
+              if "Config.enableKVM = true;" in value:
+                  value = value.replace("Config.enableKVM = true;", "Config.enableKVM = false;", 1)
+              if "Config.enableKVM = false;" not in value:
+                  raise SystemExit(f"KVM must be disabled in {activity}")
+              if "Config.enableSDLSound = false;" not in value:
+                  value = value.replace("Config.enableKVM = false;", "Config.enableKVM = false;\n        Config.enableSDLSound = false;", 1)
+              if "Config.enableSoftwareUpdates = false;" not in value:
+                  value = value.replace("Config.enableSDLSound = false;", "Config.enableSDLSound = false;\n        Config.enableSoftwareUpdates = false;", 1)
+              activity.write_text(value)
+
+              gradle = module / "build.gradle"
+              value = gradle.read_text()
+              application_id = 'applicationId "com.limbo.emu.main"' if edition["module"].endswith("x86") else 'applicationId "com.limbo.emu.main.arm"'
+              if value.count(application_id) != 1:
+                  raise SystemExit(f"Could not find applicationId in {gradle}")
+              value = value.replace(application_id, application_id + f'\n        versionCode {edition["version_code"]}\n        versionName "0.3.0"', 1)
+              value = value.replace('abiFilters "armeabi-v7a","arm64-v8a", "x86", "x86_64"', 'abiFilters "arm64-v8a"')
+              gradle.write_text(value)
+
+              for folder in ("drawable", "drawable-ldpi", "drawable-mdpi", "drawable-hdpi"):
+                  icon = module / "src/main/res" / folder / "limbo.xml"
+                  icon.parent.mkdir(parents=True, exist_ok=True)
+                  icon.write_text(icon_xml)
+
+          base = Path("limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/LimboActivity.java")
+          value = base.read_text()
+          needle = '            if (Build.VERSION.SDK_INT >= 26)' + chr(10) + '                System.loadLibrary("compat-SDL2-addons");'
+          if value.count(needle) != 1:
+              raise SystemExit("Expected optional SDL audio addon load was not found exactly once")
+          base.write_text(value.replace(needle, "", 1))
           PY
 
-      - name: Build Wildfire Lab APK
+      - name: Build Wildfire Lab PC and Mobile APKs
         working-directory: LimboSource
         run: |
           set -eux
-          gradle :limbo-android-x86:assembleDebug --no-daemon
+          gradle :limbo-android-x86:assembleDebug :limbo-android-arm:assembleDebug --no-daemon
           mkdir -p "$GITHUB_WORKSPACE/apk-output"
-          cp limbo-android-x86/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.2.0.apk"
-          "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.2.0.apk" | grep -E "package:|application-label:"
-          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.2.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-x86_64.so|assets/QEMU_VERSION|assets/roms/bios.bin"
+          cp limbo-android-x86/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-output/WildfireLab-PC-0.3.0.apk"
+          cp limbo-android-arm/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk"
+          "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-PC-0.3.0.apk" | grep -E "package: name='com.limbo.emu.main'|application-label:'Wildfire Lab PC'"
+          "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk" | grep -E "package: name='com.limbo.emu.main.arm'|application-label:'Wildfire Lab Mobile'"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-PC-0.3.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-x86_64.so|assets/QEMU_VERSION|assets/roms/bios.bin"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-Mobile-0.3.0.apk" | grep -E "lib/arm64-v8a/libqemu-system-aarch64.so|lib/arm64-v8a/libqemu-system-arm.so|assets/QEMU_VERSION"
 
-      - name: Upload Wildfire Lab APK
+      - name: Upload Wildfire Lab APKs
         uses: actions/upload-artifact@v4
         with:
-          name: wildfire-lab-0.2.0-apk
-          path: apk-output/WildfireLab-0.2.0.apk
+          name: wildfirelab-pc-and-mobile-apks
+          path: apk-output/*.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
