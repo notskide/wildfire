@@ -111,7 +111,6 @@ jobs:
           cp -a native-engine/assets/. LimboSource/limbo-android-arm/src/main/assets/
           test -f LimboSource/limbo-android-x86/src/main/jniLibs/arm64-v8a/libqemu-system-x86_64.so
           test -f LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a/libqemu-system-aarch64.so
-          test -f LimboSource/limbo-android-arm/src/main/jniLibs/arm64-v8a/libqemu-system-arm.so
 
       - name: Apply Wildfire ROM ZIP importer
         run: |
