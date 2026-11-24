@@ -14,6 +14,10 @@ file_utils = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/
 arm_activity = root / "limbo-android-arm/src/main/java/com/limbo/emu/main/arm/LimboEmuActivity.java"
 importer_source = patch_root / "WildfireRomZipImporterActivity.java"
 importer_target = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/files/WildfireRomZipImporterActivity.java"
+arm_source = patch_root / "WildfireArmEmuActivity.java"
+arm_target = root / "limbo-android-x86/src/main/java/com/limbo/emu/main/arm/LimboEmuActivity.java"
+home_source = patch_root / "WildfireHomeActivity.java"
+home_target = root / "limbo-android-x86/src/main/java/com/limbo/emu/main/WildfireHomeActivity.java"
 
 def replace_once(path, old, new):
     value = path.read_text()
@@ -63,4 +67,10 @@ if not importer_source.is_file():
 importer_target.parent.mkdir(parents=True, exist_ok=True)
 shutil.copy2(importer_source, importer_target)
 
-print("Applied Wildfire multi-architecture and ROM ZIP importer patches.")
+for source, target in ((arm_source, arm_target), (home_source, home_target)):
+    if not source.is_file():
+        raise SystemExit(f"Missing Wildfire activity source: {source}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, target)
+
+print("Applied unified Wildfire Lab, ARM64 guest and ROM ZIP importer patches.")
