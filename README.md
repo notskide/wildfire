@@ -54,7 +54,7 @@ A ROM ZIP is a container, not a bootable virtual disk. It may contain files such
 
 ### Phone OS compatibility boundary
 
-The Mobile edition adds an AArch64 (ARM64) virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
+The Phone / ARM mode adds an AArch64 (ARM64) virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
 
 The existing TSkideOS ISO remains x86-only. A native ARM phone build of TSkideOS would require a separate ARM kernel, boot image and suitable device drivers.
 
