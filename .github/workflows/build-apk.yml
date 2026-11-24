@@ -144,30 +144,31 @@ jobs:
           manifest = module / "src/main/AndroidManifest.xml"
           value = manifest.read_text()
           launcher = '''            <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>'''
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>'''
           if value.count(launcher) != 1:
               raise SystemExit("Expected the original PC launcher intent filter exactly once")
           value = value.replace(launcher, "", 1)
           value = value.replace('''        <activity
-                  android:name="LimboEmuActivity"''', '''        <activity
-                  android:name="com.limbo.emu.main.WildfireHomeActivity"
-                  android:exported="true"
-                  android:label="Wildfire Lab"
-                  android:theme="@style/Theme.AppCompat.NoActionBar">
-                  <intent-filter>
-                      <action android:name="android.intent.action.MAIN" />
-                      <category android:name="android.intent.category.LAUNCHER" />
-                  </intent-filter>
-              </activity>
-              <activity
-                  android:name="com.limbo.emu.main.arm.LimboEmuActivity"
-                  android:exported="false"
-                  android:label="Wildfire Lab ARM64"
-                  android:theme="@style/Theme.AppCompat.NoActionBar" />
-              <activity
-                  android:name="LimboEmuActivity"''', 1)
+            android:name="LimboEmuActivity"''', '''        <activity
+            android:name="com.limbo.emu.main.WildfireHomeActivity"
+            android:exported="true"
+            android:label="Wildfire Lab"
+            android:theme="@style/Theme.AppCompat.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.limbo.emu.main.arm.LimboEmuActivity"
+            android:exported="false"
+            android:label="Wildfire Lab ARM64"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+        <activity
+            android:name="LimboEmuActivity"
+            android:exported="false"''', 1)
           value = value.replace('android:label="Limbo x86 PC Emulator"', 'android:label="Wildfire Lab"')
           value = value.replace('android:label="Limbo x86"', 'android:label="Wildfire Lab PC"')
           if "WildfireHomeActivity" not in value or "com.limbo.emu.main.arm.LimboEmuActivity" not in value:
