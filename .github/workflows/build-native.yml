@@ -117,7 +117,7 @@ jobs:
           qemu_blit = Path("qemu/ui/sdl2-2d.c")
           blit_source = qemu_blit.read_text()
           function_start = "void sdl2_2d_update("
-          function_end = "\\nvoid sdl2_2d_switch("
+          function_end = "\nvoid sdl2_2d_switch("
           if blit_source.count(function_start) != 1 or blit_source.count(function_end) != 1:
               raise SystemExit("Could not locate the SDL 2D update function exactly once")
           start_index = blit_source.index(function_start)
