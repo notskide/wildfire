@@ -24,7 +24,7 @@ make -C tskideos clean iso
 
 The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and tests the ISO on relevant kernel changes.
 
-## Wildfire Lab 0.4.0
+## Wildfire Lab 0.4.1
 
 GitHub Actions packages one installable Android APK named **Wildfire Lab**. On launch, choose the guest architecture:
 
@@ -52,6 +52,12 @@ Use **Import ROM ZIP** in the VM app to extract a ROM archive into a folder you 
 
 A ROM ZIP is a container, not a bootable virtual disk. It may contain files such as `boot.img`, `system.img`, `vendor.img`, `super.img`, `recovery.img` or `payload.bin`. Attach only components that match the VM's virtual hardware and boot method. Android sparse images or payload packages may need conversion before QEMU can use them.
 
+### Background VM execution and display
+
+The VM runs in an Android foreground service, so you can switch to other apps while the guest continues executing. Wildfire Lab keeps a partial CPU wake lock and a Wi-Fi lock while the VM is active, and shows a quiet ongoing notification you can tap to return. This uses extra battery; stopping the VM releases both locks. Android can still end the process after a force-stop or system termination. The guest keeps running in the background, but its SDL screen is suspended while the app is not visible and refreshes when you return.
+
+The SDL display requests vertical-sync presentation with a fallback for devices that cannot provide it, and uses a default refresh interval of about 16 ms (roughly 60 Hz) to reduce tearing and improve frame pacing.
+
 ### Phone OS compatibility boundary
 
 The Phone / ARM mode adds an AArch64 (ARM64) virtual machine; it does not emulate every real phone model. Firmware images for a specific Samsung, Pixel, HTC or other handset can depend on that device's exact SoC, boot chain, graphics, radio and vendor drivers. Such images are not guaranteed to boot in a generic QEMU machine. This is a virtualisation feature, not a phone flasher and it does not install firmware onto the Android device running the app.
@@ -60,7 +66,7 @@ The existing TSkideOS ISO remains x86-only. A native ARM phone build of TSkideOS
 
 ## Build and download
 
-The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. The APK workflow places both guest engines in one app and publishes one `wildfirelab-unified-apk` artifact containing `WildfireLab-0.4.0.apk`. Changes to the app workflow or patch scripts also trigger packaging against the latest successful native-engine build.
+The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. The APK workflow places both guest engines in one app and publishes one `wildfirelab-unified-apk` artifact containing `WildfireLab-0.4.1.apk`. Changes to the app workflow or patch scripts also trigger packaging against the latest successful native-engine build.
 
 The **Build TSkideOS ISO** workflow separately builds and tests `tskideos/build/tskideos.iso`.
 

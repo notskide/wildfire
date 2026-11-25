@@ -18,6 +18,8 @@ arm_source = patch_root / "WildfireArmEmuActivity.java"
 arm_target = root / "limbo-android-x86/src/main/java/com/limbo/emu/main/arm/LimboEmuActivity.java"
 home_source = patch_root / "WildfireHomeActivity.java"
 home_target = root / "limbo-android-x86/src/main/java/com/limbo/emu/main/WildfireHomeActivity.java"
+machine_service = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/machine/MachineService.java"
+sdl_activity = root / "limbo-android-lib/src/main/java/com/max2idea/android/limbo/main/LimboSDLActivity.java"
 
 def replace_once(path, old, new):
     value = path.read_text()
@@ -73,4 +75,46 @@ for source, target in ((arm_source, arm_target), (home_source, home_target)):
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
 
-print("Applied unified Wildfire Lab, ARM64 guest and ROM ZIP importer patches.")
+replace_once(
+    machine_service,
+    'NotificationChannel chan = new NotificationChannel(Config.notificationChannelID, Config.notificationChannelName, NotificationManager.IMPORTANCE_NONE);',
+    'NotificationChannel chan = new NotificationChannel("wildfire_lab_vm_v2", "Wildfire Lab VM", NotificationManager.IMPORTANCE_LOW);'
+)
+
+replace_once(
+    machine_service,
+    'builder = new NotificationCompat.Builder(service, Config.notificationChannelID);',
+    'builder = new NotificationCompat.Builder(service, "wildfire_lab_vm_v2");'
+)
+
+replace_once(
+    machine_service,
+    'mWifiLock.setReferenceCounted(false);',
+    'mWifiLock.setReferenceCounted(false);\n        if (!mWifiLock.isHeld()) {\n            mWifiLock.acquire();\n        }'
+)
+
+replace_once(
+    machine_service,
+    'mWakeLock.setReferenceCounted(false);',
+    'mWakeLock.setReferenceCounted(false);\n        if (!mWakeLock.isHeld()) {\n            mWakeLock.acquire();\n        }'
+)
+
+replace_once(
+    machine_service,
+    '    public void onDestroy() {\n        Log.d(TAG, "Service destroyed");\n        super.onDestroy();\n    }',
+    '    public void onDestroy() {\n        Log.d(TAG, "Service destroyed");\n        releaseLocks();\n        if (service == this) {\n            service = null;\n        }\n        super.onDestroy();\n    }'
+)
+
+replace_once(
+    machine_service,
+    '    public void onTaskRemoved(Intent intent) {\n        LimboSettingsManager.setExitCode(this, Config.EXIT_SUCCESS);\n    }',
+    '    public void onTaskRemoved(Intent intent) {\n        LimboSettingsManager.setExitCode(this, Config.EXIT_SUCCESS);\n        if (MachineController.getInstance().isRunning()) {\n            updateServiceNotification("VM continues running in the background");\n        }\n    }'
+)
+
+replace_once(
+    sdl_activity,
+    '        if (MachineController.getInstance().isRunning())\n            notifyAction(MachineAction.UPDATE_NOTIFICATION,\n                    getString(R.string.VMSuspended));',
+    '        if (MachineController.getInstance().isRunning())\n            notifyAction(MachineAction.UPDATE_NOTIFICATION,\n                    "VM continues running in the background");'
+)
+
+print("Applied Wildfire background service, synchronized display and ROM ZIP importer patches.")

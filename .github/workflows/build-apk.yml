@@ -1,14 +1,6 @@
 name: Package Unified Wildfire Lab APK
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/build-apk.yml"
-      - "patches/**"
-      - "scripts/**"
-      - "README.md"
   workflow_run:
     workflows:
       - Build Wildfire Lab native engine
@@ -171,9 +163,9 @@ jobs:
 
           gradle = module / "build.gradle"
           value = gradle.read_text()
-          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"\n        versionCode 40000\n        versionName "0.4.0"', 1)
+          value = value.replace('applicationId "com.limbo.emu.main"', 'applicationId "com.limbo.emu.main"\n        versionCode 40100\n        versionName "0.4.1"', 1)
           value = value.replace('abiFilters "armeabi-v7a","arm64-v8a", "x86", "x86_64"', 'abiFilters "arm64-v8a"')
-          if 'versionName "0.4.0"' not in value:
+          if 'versionName "0.4.1"' not in value:
               raise SystemExit("Unified app version was not configured")
           gradle.write_text(value)
 
@@ -207,16 +199,16 @@ jobs:
           set -eux
           gradle :limbo-android-x86:assembleDebug --no-daemon
           mkdir -p "$GITHUB_WORKSPACE/apk-output"
-          cp limbo-android-x86/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.0.apk"
-          "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.0.apk" | grep -E "package: name='com.limbo.emu.main'|application-label:'Wildfire Lab'"
-          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.0.apk" | grep "lib/arm64-v8a/libqemu-system-x86_64.so"
-          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.0.apk" | grep "lib/arm64-v8a/libqemu-system-aarch64.so"
-          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.0.apk" | grep -E "assets/QEMU_VERSION|assets/roms/bios.bin"
+          cp limbo-android-x86/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.1.apk"
+          "$ANDROID_HOME/build-tools/29.0.3/aapt" dump badging "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.1.apk" | grep -E "package: name='com.limbo.emu.main'|application-label:'Wildfire Lab'"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.1.apk" | grep "lib/arm64-v8a/libqemu-system-x86_64.so"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.1.apk" | grep "lib/arm64-v8a/libqemu-system-aarch64.so"
+          unzip -l "$GITHUB_WORKSPACE/apk-output/WildfireLab-0.4.1.apk" | grep -E "assets/QEMU_VERSION|assets/roms/bios.bin"
 
       - name: Upload unified Wildfire Lab APK
         uses: actions/upload-artifact@v4
         with:
           name: wildfirelab-unified-apk
-          path: apk-output/WildfireLab-0.4.0.apk
+          path: apk-output/WildfireLab-0.4.1.apk
           if-no-files-found: error
           retention-days: 30

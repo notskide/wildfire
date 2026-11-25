@@ -79,6 +79,43 @@ jobs:
           patch -d glib -p1 < patches/glib-2.56.1.patch
           patch -d SDL2 -p1 < patches/sdl2-2.0.8.patch
 
+      - name: Enable synchronized SDL display output
+        working-directory: LimboSource/limbo-android-lib/src/main/jni
+        run: |
+          set -eux
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              value = path.read_text()
+              if value.count(old) != 1:
+                  raise SystemExit(f"Expected one patch anchor in {path}: {old}")
+              path.write_text(value.replace(old, new, 1))
+
+          qemu_display = Path("qemu/ui/sdl2.c")
+          replace_once(
+              qemu_display,
+              "scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED);",
+              """scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+              if (!scon->real_renderer) {
+                  SDL_ClearError();
+                  scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED);
+              }"""
+          )
+
+          qemu_console = Path("qemu/ui/console.c")
+          replace_once(
+              qemu_console,
+              "int gui_refresh_interval_default = 30;",
+              "int gui_refresh_interval_default = 16;"
+          )
+
+          if "SDL_RENDERER_PRESENTVSYNC" not in qemu_display.read_text():
+              raise SystemExit("SDL vertical-sync presentation was not enabled")
+          if "gui_refresh_interval_default = 16;" not in qemu_console.read_text():
+              raise SystemExit("The 60 Hz display refresh interval was not configured")
+          PY
+
       - name: Compile ARM64 Android host engines for PC and phone guests
         working-directory: LimboSource/limbo-android-lib/src/main/jni
         env:
