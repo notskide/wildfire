@@ -115,48 +115,14 @@ jobs:
           )
 
           qemu_blit = Path("qemu/ui/sdl2-2d.c")
-          replace_once(
-              qemu_blit,
-              """void sdl2_2d_update(DisplayChangeListener *dcl,
-                              int x, int y, int w, int h)
-          {
-              struct sdl2_console *scon = container_of(dcl, struct sdl2_console, dcl);
-              DisplaySurface *surf = qemu_console_surface(dcl->con);
-              SDL_Rect rect;
-
-              assert(!scon->opengl);
-
-              if (!surf) {
-                  return;
-              }
-              if (!scon->texture) {
-                  return;
-              }
-
-              /*
-               * SDL2 seems to do some double-buffering, and trying to only
-               * update the changed areas results in only one of the two buffers
-               * being updated.  Which flickers alot.  So lets not try to be
-               * clever do a full update every time ...
-               */
-          #if 0
-              rect.x = x;
-              rect.y = y;
-              rect.w = w;
-              rect.h = h;
-          #else
-              rect.x = 0;
-              rect.y = 0;
-              rect.w = surface_width(surf);
-              rect.h = surface_height(surf);
-          #endif
-
-              SDL_UpdateTexture(scon->texture, NULL, surface_data(surf),
-                                surface_stride(surf));
-              SDL_RenderCopy(scon->real_renderer, scon->texture, &rect, &rect);
-              SDL_RenderPresent(scon->real_renderer);
-          }""",
-              """void sdl2_2d_update(DisplayChangeListener *dcl,
+          blit_source = qemu_blit.read_text()
+          function_start = "void sdl2_2d_update("
+          function_end = "\\nvoid sdl2_2d_switch("
+          if blit_source.count(function_start) != 1 or blit_source.count(function_end) != 1:
+              raise SystemExit("Could not locate the SDL 2D update function exactly once")
+          start_index = blit_source.index(function_start)
+          end_index = blit_source.index(function_end, start_index)
+          new_function = """void sdl2_2d_update(DisplayChangeListener *dcl,
                               int x, int y, int w, int h)
           {
               struct sdl2_console *scon = container_of(dcl, struct sdl2_console, dcl);
@@ -184,7 +150,7 @@ jobs:
               SDL_RenderCopy(scon->real_renderer, scon->texture, NULL, NULL);
               SDL_RenderPresent(scon->real_renderer);
           }"""
-          )
+          qemu_blit.write_text(blit_source[:start_index] + new_function + blit_source[end_index:])
 
           display_source = qemu_display.read_text()
           console_source = qemu_console.read_text()
