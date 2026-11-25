@@ -24,7 +24,7 @@ make -C tskideos clean iso
 
 The ISO is created at `tskideos/build/tskideos.iso`. GitHub Actions builds and tests the ISO on relevant kernel changes.
 
-## Wildfire Lab 0.4.1
+## Wildfire Lab 0.4.2
 
 GitHub Actions packages one installable Android APK named **Wildfire Lab**. On launch, choose the guest architecture:
 
@@ -56,7 +56,7 @@ A ROM ZIP is a container, not a bootable virtual disk. It may contain files such
 
 The VM runs in an Android foreground service, so you can switch to other apps while the guest continues executing. Wildfire Lab keeps a partial CPU wake lock and a Wi-Fi lock while the VM is active, and shows a quiet ongoing notification you can tap to return. This uses extra battery; stopping the VM releases both locks. Android can still end the process after a force-stop or system termination. The guest keeps running in the background, but its SDL screen is suspended while the app is not visible and refreshes when you return.
 
-The SDL display requests vertical-sync presentation with a fallback for devices that cannot provide it, and uses a default refresh interval of about 16 ms (roughly 60 Hz) to reduce tearing and improve frame pacing.
+The SDL renderer requests vertical-sync presentation, then falls back to an accelerated or automatic renderer if the device does not support it. QEMU refreshes the display on a 16 ms interval (about 60 Hz). Framebuffer changes are uploaded to the SDL texture as dirty rectangles instead of copying the entire guest screen for every small update; SDL then redraws the complete cached texture so partial updates do not leave stale pixels in the back buffer.
 
 ### Phone OS compatibility boundary
 
@@ -66,7 +66,7 @@ The existing TSkideOS ISO remains x86-only. A native ARM phone build of TSkideOS
 
 ## Build and download
 
-The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. The APK workflow places both guest engines in one app and publishes one `wildfirelab-unified-apk` artifact containing `WildfireLab-0.4.1.apk`. Changes to the app workflow or patch scripts also trigger packaging against the latest successful native-engine build.
+The **Build Wildfire Lab native engine** workflow compiles the ARM64 Android host libraries with x86_64 and AArch64 guest engines. The APK workflow places both guest engines in one app and publishes one `wildfirelab-unified-apk` artifact containing `WildfireLab-0.4.2.apk`. Changes to the app workflow or patch scripts also trigger packaging against the latest successful native-engine build.
 
 The **Build TSkideOS ISO** workflow separately builds and tests `tskideos/build/tskideos.iso`.
 
