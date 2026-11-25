@@ -93,10 +93,27 @@ jobs:
               path.write_text(value.replace(old, new, 1))
 
           qemu_display = Path("qemu/ui/sdl2.c")
-          replace_once(
-              qemu_display,
-              "scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED);",
-              """scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+          display_source = qemu_display.read_text()
+          renderer_start_marker = "#if defined(__LIMBO_SDL_FORCE_SOFTWARE_RENDERING__)"
+          renderer_end_marker = "#endif"
+          if display_source.count(renderer_start_marker) != 1:
+              raise SystemExit("Could not locate Limbo's SDL renderer selection block exactly once")
+          renderer_start = display_source.index(renderer_start_marker)
+          renderer_end = display_source.index(renderer_end_marker, renderer_start) + len(renderer_end_marker)
+          renderer_block = display_source[renderer_start:renderer_end]
+          if "SDL_RENDERER_SOFTWARE" not in renderer_block or "SDL_RENDERER_ACCELERATED" not in renderer_block or "SDL_CreateRenderer(scon->real_window, -1, 0)" not in renderer_block:
+              raise SystemExit("Limbo's SDL renderer selection block did not match the expected source")
+
+          new_renderer_block = """#if defined(__LIMBO_SDL_FORCE_SOFTWARE_RENDERING__)
+              scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_SOFTWARE);
+          #elif defined(__LIMBO_SDL_FORCE_HARDWARE_RENDERING__)
+              scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+              if (!scon->real_renderer) {
+                  SDL_ClearError();
+                  scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED);
+              }
+          #else
+              scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
               if (!scon->real_renderer) {
                   SDL_ClearError();
                   scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, SDL_RENDERER_ACCELERATED);
@@ -104,8 +121,10 @@ jobs:
               if (!scon->real_renderer) {
                   SDL_ClearError();
                   scon->real_renderer = SDL_CreateRenderer(scon->real_window, -1, 0);
-              }"""
-          )
+              }
+          #endif"""
+          display_source = display_source[:renderer_start] + new_renderer_block + display_source[renderer_end:]
+          qemu_display.write_text(display_source)
 
           qemu_console = Path("qemu/ui/console.c")
           replace_once(
